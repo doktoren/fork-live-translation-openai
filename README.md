@@ -1,3 +1,10 @@
+Original repository is at https://github.com/twilio-samples/live-translation-openai-realtime-api<br/>
+Forked repository is at https://github.com/doktoren/fork-live-translation-openai
+
+# Local tweaks:
+
+Mandarin has been replaced with Danish
+
 #  Live Voice Translation with Twilio & OpenAI Realtime
 This application demonstrates how to use Twilio and OpenAI's Realtime API for bidirectional
 voice language translation between a caller and a contact center agent.
@@ -88,7 +95,7 @@ The included Studio Flow will play a prerecorded message for the caller asking t
 1. English
 2. Spanish
 3. French
-4. Mandarin
+4. Danish
 5. Hindi
 
 You can update the Studio Flow logic to change the languages you'd like to support. See [here](https://platform.openai.com/docs/guides/text-to-speech/supported-languages) for more information on OpenAI's supported language options. 
