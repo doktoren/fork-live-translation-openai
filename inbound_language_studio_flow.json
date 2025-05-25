@@ -53,7 +53,7 @@
         },
         "loop": 1,
         "finish_on_key": "#",
-        "say": "Welcome to the AI Translator. What language would you like to speak in?\nPress 1 for English\nPress 2 for Spanish\nPress 3 for French\nPress 4 for Mandarin\nPress 5 for Hindi",
+        "say": "Welcome to the AI Translator. What language would you like to speak in?\nPress 1 for English\nPress 2 for Spanish\nPress 3 for French\nPress 4 for Danish\nPress 5 for czech",
         "language": "en-US",
         "stop_gather": true,
         "gather_language": "en",
@@ -112,7 +112,7 @@
           ]
         },
         {
-          "next": "set_language_mandarin",
+          "next": "set_language_danish",
           "event": "match",
           "conditions": [
             {
@@ -126,7 +126,7 @@
           ]
         },
         {
-          "next": "set_language_hindi",
+          "next": "set_language_czech",
           "event": "match",
           "conditions": [
             {
@@ -149,7 +149,7 @@
       }
     },
     {
-      "name": "set_language_hindi",
+      "name": "set_language_czech",
       "type": "set-variables",
       "transitions": [
         {
@@ -161,7 +161,7 @@
         "variables": [
           {
             "type": "string",
-            "value": "hindi",
+            "value": "czech",
             "key": "caller_language"
           }
         ],
@@ -242,7 +242,7 @@
       }
     },
     {
-      "name": "set_language_mandarin",
+      "name": "set_language_danish",
       "type": "set-variables",
       "transitions": [
         {
@@ -254,7 +254,7 @@
         "variables": [
           {
             "type": "string",
-            "value": "mandarin",
+            "value": "danish",
             "key": "caller_language"
           }
         ],

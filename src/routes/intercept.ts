@@ -6,58 +6,67 @@ import AudioInterceptor from '@/services/AudioInterceptor';
 import StreamSocket, { StartBaseAudioMessage } from '@/services/StreamSocket';
 
 const interceptWS: FastifyPluginAsyncTypebox = async (server) => {
+  const twilio = Twilio(
+    server.config.TWILIO_ACCOUNT_SID,
+    server.config.TWILIO_AUTH_TOKEN,
+  );
+
   server.get(
     '/intercept',
-    {
-      websocket: true,
-    },
+    { websocket: true },
     async (socket, req) => {
-      const twilio = Twilio(
-        server.config.TWILIO_ACCOUNT_SID,
-        server.config.TWILIO_AUTH_TOKEN,
-      );
       const logger = req.diScope.resolve<FastifyBaseLogger>('logger');
-      const ss = new StreamSocket({
-        logger,
-        socket,
-      });
-      const map =
-        req.diScope.resolve<Map<string, AudioInterceptor>>('audioInterceptors');
+      const ss = new StreamSocket({ logger, socket });
+      const map = req.diScope.resolve<Map<string, AudioInterceptor>>(
+        'audioInterceptors',
+      );
 
       ss.onStart(async (message: StartBaseAudioMessage) => {
         const { customParameters } = message.start;
+        const from = customParameters?.from;
+        if (!from || typeof from !== 'string') return;
 
-        if (
-          customParameters?.direction === 'inbound' &&
-          typeof customParameters.from === 'string'
-        ) {
-          ss.from = customParameters.from;
+        // inbound leg
+        if (customParameters.direction === 'inbound') {
+          ss.from = from;
           const interceptor = new AudioInterceptor({
             logger,
             config: server.config,
-            callerLanguage: customParameters.lang.toString(),
+            callerLanguage: String(customParameters.lang),
           });
           interceptor.callerSocket = ss;
-          map.set(customParameters.from, interceptor);
+          map.set(from, interceptor);
           logger.info(
-            'Added inbound interceptor for %s with streamSid %s for callSid',
-            customParameters.from,
+            'Inbound stream for %s (streamSid=%s)',
+            from,
             message.start.streamSid,
           );
 
-          logger.info('Connecting to Agent');
+          // decide where to forward
+          const external = server.config.CALL_THIS_NUMBER_INSTEAD as string;
+          const forwardTo = external || server.config.TWILIO_FLEX_NUMBER;
+          const announcement = external
+            ? 'Please hold while we connect you to an external number.'
+            : 'A customer is on the line.';
+
+          logger.info('Dialing %s for %s', forwardTo, from);
           await twilio.calls.create({
             from: server.config.TWILIO_CALLER_NUMBER,
-            to: server.config.TWILIO_FLEX_NUMBER,
-            callerId: customParameters.from,
+            to: forwardTo,
+            // If callerId is passed as an argument then the phone number of the caller
+            // will be shown as the caller in the called phone. However, this is only
+            // allowed if the caller is a verified number or purchased from Twilio.
+            // callerId: from,
             twiml: `
               <Response>
-                <Say>A customer is on the line.</Say>
+                <Say>${announcement}</Say>
                 <Connect>
-                  <Stream name="Outbound Audio Stream" url="wss://${server.config.NGROK_DOMAIN}/intercept">
+                  <Stream
+                    name="Outbound Audio Stream"
+                    url="wss://${server.config.NGROK_DOMAIN}/intercept"
+                  >
                     <Parameter name="direction" value="outbound"/>
-                    <Parameter name="callSid" value="${message.start.callSid}"/>
-                    <Parameter name="from" value="${customParameters.from}"/>
+                    <Parameter name="from"      value="${from}"/>
                   </Stream>
                 </Connect>
               </Response>
@@ -65,42 +74,41 @@ const interceptWS: FastifyPluginAsyncTypebox = async (server) => {
           });
         }
 
-        if (
-          customParameters?.direction === 'outbound' &&
-          typeof customParameters.from === 'string'
-        ) {
-          const interceptor = map.get(customParameters.from);
-          ss.from = customParameters.from;
+        // outbound leg (agent or PSTN stream)
+        if (customParameters.direction === 'outbound') {
+          const interceptor = map.get(from);
+          ss.from = from;
           if (!interceptor) {
-            logger.error(
-              'No inbound interceptor found for %s',
-              customParameters.from,
-            );
+            logger.error('No interceptor for %s', from);
             return;
           }
+
+          interceptor.agentSocket = ss;
           logger.info(
-            'Added outbound interceptor with streamSid %s',
+            'Outbound stream for %s (streamSid=%s)',
+            from,
             message.start.streamSid,
           );
-          interceptor.agentSocket = ss;
+
+          interceptor.start();
+          logger.info('AudioInterceptor started for %s', from);
         }
       });
 
       ss.onStop((message) => {
-        if (!message?.from) {
-          logger.info('No from in message - unknown what interceptor to close');
+        const from = message?.from;
+        if (!from) {
+          logger.info('Unknown stream closed');
           return;
         }
-
-        const interceptor = map.get(message.from);
+        const interceptor = map.get(from);
         if (!interceptor) {
-          logger.error('No interceptor found for %s', message.from);
+          logger.error('No interceptor to close for %s', from);
           return;
         }
-
-        logger.info('Closing interceptor');
+        logger.info('Closing interceptor for %s', from);
         interceptor.close();
-        map.delete(message.from);
+        map.delete(from);
       });
     },
   );
