@@ -68,6 +68,8 @@ export default class StreamSocket {
 
   public readonly socket: WebSocket;
 
+  private pingInterval: NodeJS.Timeout;
+
   public streamSid: string;
 
   public from?: string;
@@ -83,9 +85,16 @@ export default class StreamSocket {
   constructor(options: StreamSocketOptions) {
     this.logger = options.logger;
     this.socket = options.socket;
+    // Start keep-alive pings every 30 seconds
+    this.pingInterval = setInterval(() => {
+      if (this.socket.readyState === WebSocket.OPEN) {
+        this.socket.ping();
+      }
+    }, 30000);
 
     this.socket.on('message', this.onMessage);
     this.socket.on('close', () => {
+      clearInterval(this.pingInterval);
       this.logger.info('WebSocket connection closed');
     });
     this.socket.on('error', (err) => {
@@ -94,6 +103,7 @@ export default class StreamSocket {
   }
 
   public close() {
+    clearInterval(this.pingInterval);
     this.socket.close();
   }
 

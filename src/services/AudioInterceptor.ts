@@ -33,8 +33,12 @@ export default class AudioInterceptor {
   private config: Config;
 
   private readonly callerLanguage?: string;
+  
+  #callerPingInterval?: NodeJS.Timeout;
 
   #callerSocket?: StreamSocket;
+
+  #agentPingInterval?: NodeJS.Timeout;
 
   #agentSocket?: StreamSocket;
 
@@ -68,9 +72,11 @@ export default class AudioInterceptor {
       this.#agentSocket = null;
     }
     if (this.#callerOpenAISocket) {
+      clearInterval(this.#callerPingInterval!);
       this.#callerOpenAISocket.close();
     }
     if (this.#agentOpenAISocket) {
+      clearInterval(this.#agentPingInterval!);
       this.#agentOpenAISocket.close();
     }
 
@@ -172,6 +178,18 @@ export default class AudioInterceptor {
     // Store the WebSocket instances
     this.#callerOpenAISocket = callerSocket;
     this.#agentOpenAISocket = agentSocket;
+
+    // start keep-alive pings every 30 seconds for OpenAI sockets
+    this.#callerPingInterval = setInterval(() => {
+      if (this.#callerOpenAISocket?.readyState === WebSocket.OPEN) {
+        this.#callerOpenAISocket.ping();
+      }
+    }, 30000);
+    this.#agentPingInterval = setInterval(() => {
+      if (this.#agentOpenAISocket?.readyState === WebSocket.OPEN) {
+        this.#agentOpenAISocket.ping();
+      }
+    }, 30000);
 
     // Configure the Realtime AI Agents with new 'session.update' client event
     const callerConfigMsg = {
@@ -287,10 +305,12 @@ export default class AudioInterceptor {
 
     // Event listeners for when the connection is closed
     callerSocket.on('close', () => {
+      clearInterval(this.#callerPingInterval!);
       this.logger.info('Caller webSocket connection to OpenAI is closed now.');
     });
 
     agentSocket.on('close', () => {
+      clearInterval(this.#agentPingInterval!);
       this.logger.info('Agent webSocket connection to OpenAI is closed now.');
     });
   }
