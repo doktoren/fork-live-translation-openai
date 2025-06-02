@@ -1,5 +1,5 @@
 import { FastifyBaseLogger } from 'fastify';
-import { WebSocket } from '@fastify/websocket';
+import WebSocket from 'ws';
 
 type BaseAudioMessage = {
   sequenceNumber: number;
