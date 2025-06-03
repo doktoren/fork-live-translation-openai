@@ -103,6 +103,7 @@ class OpenAIRealtimeTranslator:
         print("Listening for responses...")
         
         response_started = False
+        response_created = False  # Track if we've already created a response
         
         while True:
             try:
@@ -130,18 +131,19 @@ class OpenAIRealtimeTranslator:
                 elif data.get('type') == 'conversation.item.created':
                     print("Conversation item created")
                     
-                    # Manually create response to ensure audio is included
-                    # The server VAD automatic response might not include audio
-                    if not response_started:
-                        print("Creating manual response to ensure audio output...")
+                    # Only create ONE response for the entire conversation
+                    # Server VAD may detect multiple speech segments, but we only want one response
+                    if not response_created and not response_started:
+                        print("Creating single response for all detected speech...")
                         response_message = {
                             'type': 'response.create',
                             'response': {
                                 'modalities': ['text', 'audio'],
-                                'instructions': 'Translate the provided audio to Danish. Respond only with the translation in audio format.'
+                                'instructions': 'Translate all the provided audio to Danish. Respond only with the translation in audio format.'
                             }
                         }
                         await self.websocket.send(json.dumps(response_message))
+                        response_created = True
                 
                 elif data.get('type') == 'response.created':
                     print("Response creation started")
