@@ -194,15 +194,22 @@ def save_audio_chunks_as_mp3(audio_chunks: list, output_file: str):
     
     print(f"Combining {len(audio_chunks)} audio chunks...")
     
-    # Combine all audio chunks
-    combined_audio = ''.join(audio_chunks)
+    # Decode each chunk individually and combine the raw audio bytes
+    audio_data = b''
+    for i, chunk in enumerate(audio_chunks):
+        try:
+            chunk_data = base64.b64decode(chunk)
+            audio_data += chunk_data
+            print(f"Chunk {i+1}: {len(chunk)} chars -> {len(chunk_data)} bytes")
+        except Exception as e:
+            print(f"Error decoding chunk {i+1}: {e}")
+            return False
     
-    try:
-        audio_data = base64.b64decode(combined_audio)
-        print(f"Decoded audio data: {len(audio_data)} bytes")
-        print(f"First 20 bytes: {audio_data[:20].hex()}")
-    except Exception as e:
-        print(f"Error decoding audio data: {e}")
+    print(f"Total decoded audio data: {len(audio_data)} bytes")
+    print(f"First 20 bytes: {audio_data[:20].hex()}")
+    
+    if len(audio_data) == 0:
+        print("No audio data after decoding chunks")
         return False
     
     # Save as temporary raw audio file first
