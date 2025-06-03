@@ -36,7 +36,7 @@ export default class AudioInterceptor {
   private config: Config;
 
   private readonly callerLanguage?: string;
-  
+
   #callerPingInterval?: NodeJS.Timeout;
 
   #callerSocket?: StreamSocket;
@@ -57,12 +57,18 @@ export default class AudioInterceptor {
 
   // Audio mixing state tracking
   #callerTranslationActive: boolean = false;
+
   #agentTranslationActive: boolean = false;
+
   #callerActiveResponseId?: string;
+
   #agentActiveResponseId?: string;
 
   // Audio timing and buffering for problem 2
-  #audioBuffer = new Map<string, { payload: string; timestamp: number; sequenceNumber: number }[]>();
+  #audioBuffer = new Map<
+    string,
+    { payload: string; timestamp: number; sequenceNumber: number }[]
+  >();
 
   public constructor(options: AudioInterceptorOptions) {
     this.logger = options.logger;
@@ -121,20 +127,23 @@ export default class AudioInterceptor {
     this.logger.info('Initiating the websocket to OpenAI Realtime S2S API');
     // Start Audio Interception
     this.logger.info('Both sockets are set. Starting interception');
-    this.#callerSocket.onMedia(
-      this.translateAndForwardCallerAudio.bind(this),
-    );
-    this.#agentSocket.onMedia(
-      this.translateAndForwardAgentAudio.bind(this),
-    );
+    this.#callerSocket.onMedia(this.translateAndForwardCallerAudio.bind(this));
+    this.#agentSocket.onMedia(this.translateAndForwardAgentAudio.bind(this));
   }
 
   private translateAndForwardAgentAudio(message: MediaBaseAudioMessage) {
     // Audio Mixing/Replacement: Only forward untranslated audio if no translation is active
-    if (this.config.FORWARD_AUDIO_BEFORE_TRANSLATION === 'true' && !this.#agentTranslationActive) {
-      this.sendAlignedAudio(this.#callerSocket, message.media.payload, parseInt(message.media.timestamp));
+    if (
+      this.config.FORWARD_AUDIO_BEFORE_TRANSLATION === 'true' &&
+      !this.#agentTranslationActive
+    ) {
+      this.sendAlignedAudio(
+        this.#callerSocket,
+        message.media.payload,
+        parseInt(message.media.timestamp),
+      );
     }
-    
+
     // Wait for 1 second after the first time we hear audio from the agent
     // This ensures that we don't send beeps from Flex to OpenAI when the call
     // first connects
@@ -144,7 +153,6 @@ export default class AudioInterceptor {
     } else if (now - this.#agentFirstAudioTime >= 1000) {
       if (!this.#agentOpenAISocket) {
         this.logger.error('Agent OpenAI WebSocket is not available.');
-        return;
       } else {
         this.forwardAudioToOpenAIForTranslation(
           this.#agentOpenAISocket,
@@ -156,10 +164,17 @@ export default class AudioInterceptor {
 
   private translateAndForwardCallerAudio(message: MediaBaseAudioMessage) {
     // Audio Mixing/Replacement: Only forward untranslated audio if no translation is active
-    if (this.config.FORWARD_AUDIO_BEFORE_TRANSLATION === 'true' && !this.#callerTranslationActive) {
-      this.sendAlignedAudio(this.#agentSocket, message.media.payload, parseInt(message.media.timestamp));
+    if (
+      this.config.FORWARD_AUDIO_BEFORE_TRANSLATION === 'true' &&
+      !this.#callerTranslationActive
+    ) {
+      this.sendAlignedAudio(
+        this.#agentSocket,
+        message.media.payload,
+        parseInt(message.media.timestamp),
+      );
     }
-    
+
     if (!this.#callerOpenAISocket) {
       this.logger.error('Caller OpenAI WebSocket is not available.');
       return;
@@ -176,17 +191,18 @@ export default class AudioInterceptor {
    */
   private setupOpenAISockets() {
     this.logger.warn('setupOpenAISockets called');
-    const url = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17';
+    const url =
+      'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17';
     const callerSocket = new WebSocket(url, {
       headers: {
         Authorization: `Bearer ${this.config.OPENAI_API_KEY}`,
-        'OpenAI-Beta': 'realtime=v1'
+        'OpenAI-Beta': 'realtime=v1',
       },
     });
     const agentSocket = new WebSocket(url, {
       headers: {
         Authorization: `Bearer ${this.config.OPENAI_API_KEY}`,
-        'OpenAI-Beta': 'realtime=v1'
+        'OpenAI-Beta': 'realtime=v1',
       },
     });
     const callerPrompt = AI_PROMPT_CALLER.replace(
@@ -223,7 +239,7 @@ export default class AudioInterceptor {
         input_audio_format: 'g711_ulaw',
         output_audio_format: 'g711_ulaw',
         // input_audio_transcription: {model: 'whisper-1'},
-        turn_detection: {type: 'server_vad', threshold: 0.6},
+        turn_detection: { type: 'server_vad', threshold: 0.6 },
         // {
         //   "type": "server_vad",
         //   "threshold": 0.5,
@@ -238,10 +254,10 @@ export default class AudioInterceptor {
         //   // 'create_response': true, // only in conversation mode
         //   // 'interrupt_response': true, // only in conversation mode
         // },
-        //Setting temperature to minimum allowed value to get deterministic translation results
-        temperature: 0.6
-      }
-    }
+        // Setting temperature to minimum allowed value to get deterministic translation results
+        temperature: 0.6,
+      },
+    };
     const agentConfigMsg = {
       type: 'session.update',
       session: {
@@ -250,17 +266,17 @@ export default class AudioInterceptor {
         input_audio_format: 'g711_ulaw',
         output_audio_format: 'g711_ulaw',
         // input_audio_transcription: {model: 'whisper-1'},
-        turn_detection: {type: 'server_vad', threshold: 0.6},
+        turn_detection: { type: 'server_vad', threshold: 0.6 },
         // turn_detection: {
         //   'type': 'semantic_vad',
         //   'eagerness': 'high',  // "low" | "medium" | "high" | "auto", // optional
         //   // 'create_response': true, // only in conversation mode
         //   // 'interrupt_response': true, // only in conversation mode
         // },
-        //Setting temperature to minimum allowed value to get deterministic translation results
-        temperature: 0.6
-      }
-    }
+        // Setting temperature to minimum allowed value to get deterministic translation results
+        temperature: 0.6,
+      },
+    };
 
     // Event listeners for when the connection is opened
     callerSocket.on('open', () => {
@@ -288,48 +304,57 @@ export default class AudioInterceptor {
         this.logger.info(`Caller message from OpenAI: ${msg}`);
         const currentTime = new Date().getTime();
         const message = JSON.parse(msg.toString()) as OpenAIMessage;
-      
-      // Track translation state for audio mixing
-      if (message.type === 'response.created') {
-        this.#callerTranslationActive = true;
-        this.#callerActiveResponseId = message.response?.id;
-        this.logger.info('Caller translation started - blocking untranslated audio forwarding');
-      }
-      
-      if (message.type === 'response.done' || message.type === 'response.audio.done') {
-        this.#callerTranslationActive = false;
-        this.#callerActiveResponseId = undefined;
-        this.logger.info('Caller translation completed - resuming untranslated audio forwarding');
-      }
-      
-      if (message.type === 'input_audio_buffer.speech_stopped') {
-        if (!this.#callerMessages) {
-          this.#callerMessages = [];
+
+        // Track translation state for audio mixing
+        if (message.type === 'response.created') {
+          this.#callerTranslationActive = true;
+          this.#callerActiveResponseId = message.response?.id;
+          this.logger.info(
+            'Caller translation started - blocking untranslated audio forwarding',
+          );
         }
-        this.#callerMessages.push({
-          message_id: message.event_id,
-          vad_speech_stopped_time: currentTime,
-        });
-      }
-      
-      if (message.type === 'response.audio.delta') {
-        // Handle an audio message from OpenAI, post translation
-        this.logger.info('Received caller translation from OpenAI');
+
         if (
-          !this.#callerMessages[this.#callerMessages.length - 1]
-            .first_audio_buffer_add_time
+          message.type === 'response.done' ||
+          message.type === 'response.audio.done'
         ) {
-          this.#callerMessages[
-            this.#callerMessages.length - 1
-          ].first_audio_buffer_add_time = currentTime;
+          this.#callerTranslationActive = false;
+          this.#callerActiveResponseId = undefined;
+          this.logger.info(
+            'Caller translation completed - resuming untranslated audio forwarding',
+          );
         }
-        this.sendAlignedAudio(this.#agentSocket, message.delta!, currentTime);
-      }
+
+        if (message.type === 'input_audio_buffer.speech_stopped') {
+          if (!this.#callerMessages) {
+            this.#callerMessages = [];
+          }
+          this.#callerMessages.push({
+            message_id: message.event_id,
+            vad_speech_stopped_time: currentTime,
+          });
+        }
+
+        if (message.type === 'response.audio.delta') {
+          // Handle an audio message from OpenAI, post translation
+          this.logger.info('Received caller translation from OpenAI');
+          if (
+            this.#callerMessages &&
+            this.#callerMessages.length > 0 &&
+            !this.#callerMessages[this.#callerMessages.length - 1]
+              .first_audio_buffer_add_time
+          ) {
+            this.#callerMessages[
+              this.#callerMessages.length - 1
+            ].first_audio_buffer_add_time = currentTime;
+          }
+          this.sendAlignedAudio(this.#agentSocket, message.delta!, currentTime);
+        }
       } catch (error) {
         this.logger.error('Error processing caller OpenAI message', {
           error: error instanceof Error ? error.message : String(error),
           messageType: typeof msg,
-          messageLength: msg ? msg.toString().length : 0
+          messageLength: msg ? msg.toString().length : 0,
         });
       }
     });
@@ -338,48 +363,61 @@ export default class AudioInterceptor {
         this.logger.info(`Agent message from OpenAI: ${msg.toString()}`);
         const currentTime = new Date().getTime();
         const message = JSON.parse(msg.toString()) as OpenAIMessage;
-      
-      // Track translation state for audio mixing
-      if (message.type === 'response.created') {
-        this.#agentTranslationActive = true;
-        this.#agentActiveResponseId = message.response?.id;
-        this.logger.info('Agent translation started - blocking untranslated audio forwarding');
-      }
-      
-      if (message.type === 'response.done' || message.type === 'response.audio.done') {
-        this.#agentTranslationActive = false;
-        this.#agentActiveResponseId = undefined;
-        this.logger.info('Agent translation completed - resuming untranslated audio forwarding');
-      }
-      
-      if (message.type === 'input_audio_buffer.speech_stopped') {
-        if (!this.#agentMessages) {
-          this.#agentMessages = [];
+
+        // Track translation state for audio mixing
+        if (message.type === 'response.created') {
+          this.#agentTranslationActive = true;
+          this.#agentActiveResponseId = message.response?.id;
+          this.logger.info(
+            'Agent translation started - blocking untranslated audio forwarding',
+          );
         }
-        this.#agentMessages.push({
-          message_id: message.event_id,
-          vad_speech_stopped_time: currentTime,
-        });
-      }
-      
-      if (message.type === 'response.audio.delta') {
-        // Handle an audio message from OpenAI, post translation
-        this.logger.info('Received agent translation from OpenAI');
+
         if (
-          !this.#agentMessages[this.#agentMessages.length - 1]
-            .first_audio_buffer_add_time
+          message.type === 'response.done' ||
+          message.type === 'response.audio.done'
         ) {
-          this.#agentMessages[
-            this.#agentMessages.length - 1
-          ].first_audio_buffer_add_time = currentTime;
+          this.#agentTranslationActive = false;
+          this.#agentActiveResponseId = undefined;
+          this.logger.info(
+            'Agent translation completed - resuming untranslated audio forwarding',
+          );
         }
-        this.sendAlignedAudio(this.#callerSocket, message.delta!, currentTime);
-      }
+
+        if (message.type === 'input_audio_buffer.speech_stopped') {
+          if (!this.#agentMessages) {
+            this.#agentMessages = [];
+          }
+          this.#agentMessages.push({
+            message_id: message.event_id,
+            vad_speech_stopped_time: currentTime,
+          });
+        }
+
+        if (message.type === 'response.audio.delta') {
+          // Handle an audio message from OpenAI, post translation
+          this.logger.info('Received agent translation from OpenAI');
+          if (
+            this.#agentMessages &&
+            this.#agentMessages.length > 0 &&
+            !this.#agentMessages[this.#agentMessages.length - 1]
+              .first_audio_buffer_add_time
+          ) {
+            this.#agentMessages[
+              this.#agentMessages.length - 1
+            ].first_audio_buffer_add_time = currentTime;
+          }
+          this.sendAlignedAudio(
+            this.#callerSocket,
+            message.delta!,
+            currentTime,
+          );
+        }
       } catch (error) {
         this.logger.error('Error processing agent OpenAI message', {
           error: error instanceof Error ? error.message : String(error),
           messageType: typeof msg,
-          messageLength: msg ? msg.toString().length : 0
+          messageLength: msg ? msg.toString().length : 0,
         });
       }
     });
@@ -420,7 +458,7 @@ export default class AudioInterceptor {
   private forwardAudioToOpenAIForTranslation(socket: WebSocket, audio: String) {
     this.sendMessageToOpenAI(socket, {
       type: 'input_audio_buffer.append',
-      audio: audio,
+      audio,
     });
   }
 
@@ -437,24 +475,40 @@ export default class AudioInterceptor {
    * Sends audio with proper alignment and timing to prevent stuttering
    * Addresses Problem 2: Audio stutter and alignment issues
    */
-  private sendAlignedAudio(socket: StreamSocket | null, audioPayload: string, timestamp: number) {
-    if (!socket || !socket.socket || socket.socket.readyState !== WebSocket.OPEN) {
-      this.logger.debug('Socket is not available or not open, skipping audio send');
+  private sendAlignedAudio(
+    socket: StreamSocket | null,
+    audioPayload: string,
+    timestamp: number,
+  ) {
+    if (
+      !socket ||
+      !socket.socket ||
+      socket.socket.readyState !== WebSocket.OPEN
+    ) {
+      this.logger.debug(
+        'Socket is not available or not open, skipping audio send',
+      );
       return;
     }
 
     try {
       // Align audio to G.711 frame boundaries to prevent clicks/pops
       const alignedAudio = this.alignAudioFrames(audioPayload);
-      
+
       // Use the existing StreamSocket send method which handles proper formatting
       socket.send([alignedAudio]);
-      
-      this.logger.debug(`Sent aligned audio chunk: ${alignedAudio.length} bytes at timestamp ${timestamp}`);
+
+      this.logger.debug(
+        `Sent aligned audio chunk: ${alignedAudio.length} bytes at timestamp ${timestamp}`,
+      );
     } catch (error) {
       this.logger.error('Error sending aligned audio:', error);
       // Fallback to original method if alignment fails and socket is still available
-      if (socket && socket.socket && socket.socket.readyState === WebSocket.OPEN) {
+      if (
+        socket &&
+        socket.socket &&
+        socket.socket.readyState === WebSocket.OPEN
+      ) {
         try {
           socket.send([audioPayload]);
         } catch (fallbackError) {
@@ -471,17 +525,17 @@ export default class AudioInterceptor {
   private alignAudioFrames(audioData: string): string {
     try {
       const buffer = Buffer.from(audioData, 'base64');
-      
+
       // G.711 μ-law: each sample is 1 byte, 8000 samples per second
       // Align to 8-byte boundaries for better performance and to prevent artifacts
       const frameSize = 8;
       const alignedSize = Math.floor(buffer.length / frameSize) * frameSize;
-      
+
       if (alignedSize === 0) {
         // If the chunk is too small, return as-is
         return audioData;
       }
-      
+
       const alignedBuffer = buffer.slice(0, alignedSize);
       return alignedBuffer.toString('base64');
     } catch (error) {
