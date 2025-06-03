@@ -139,10 +139,32 @@ This will:
 2. Convert it back to MP3 format
 3. Verify that the conversion pipeline is working correctly
 
+## Structure Verification Script: test_script_structure.py
+
+This script verifies the complete test script structure without requiring an OpenAI API key:
+
+#### Using uv (Recommended)
+
+```bash
+uv run --project python_tests python_tests/test_script_structure.py
+```
+
+#### Using Python directly
+
+```bash
+python python_tests/test_script_structure.py
+```
+
+This will:
+1. Test audio conversion pipeline
+2. Verify session configuration structure
+3. Validate that the script matches the TypeScript AudioInterceptor.ts implementation
+
 ### Files
 
 - `test_openai_realtime.py` - Main test script for OpenAI Realtime API
 - `verify_audio_conversion.py` - Audio conversion verification script (no API key required)
+- `test_script_structure.py` - Complete script structure verification (no API key required)
 - `README.md` - This documentation file
 
 ### Dependencies
