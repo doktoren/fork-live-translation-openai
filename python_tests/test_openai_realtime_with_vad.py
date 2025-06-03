@@ -69,7 +69,11 @@ class OpenAIRealtimeTranslator:
                 'instructions': agent_prompt,
                 'input_audio_format': 'g711_ulaw',
                 'output_audio_format': 'g711_ulaw',
-                'turn_detection': {'type': 'server_vad', 'threshold': 0.6},
+                'turn_detection': {
+                    'type': 'server_vad', 
+                    'threshold': 0.6,
+                    'create_response': True  # Automatically create response when speech ends
+                },
                 'temperature': 0.6
             }
         }
@@ -78,33 +82,31 @@ class OpenAIRealtimeTranslator:
         print("Session configured with Danish translation prompt")
         
     async def send_audio_data(self, audio_base64: str):
-        """Send audio data to OpenAI for translation."""
-        message = {
-            'type': 'input_audio_buffer.append',
-            'audio': audio_base64
-        }
+        """Send audio data to OpenAI for translation in chunks to work with server VAD."""
+        print(f"Sending audio data in chunks for server VAD processing...")
         
-        await self.websocket.send(json.dumps(message))
-        print("Audio data sent to OpenAI")
+        # Split audio into smaller chunks to simulate streaming for server VAD
+        chunk_size = 8192  # Send in 8KB chunks
+        total_chunks = (len(audio_base64) + chunk_size - 1) // chunk_size
         
-        # Commit the audio buffer
-        commit_message = {'type': 'input_audio_buffer.commit'}
-        await self.websocket.send(json.dumps(commit_message))
-        print("Audio buffer committed")
-
-        # Wait a moment for processing
-        await asyncio.sleep(0.5)
-
-        # Manually create response (even with server VAD, this helps ensure response generation)
-        response_message = {
-            'type': 'response.create',
-            'response': {
-                'modalities': ['text', 'audio'],
-                'instructions': 'Translate the provided audio to Danish. Respond only with the translation.'
+        for i in range(0, len(audio_base64), chunk_size):
+            chunk = audio_base64[i:i + chunk_size]
+            message = {
+                'type': 'input_audio_buffer.append',
+                'audio': chunk
             }
-        }
-        await self.websocket.send(json.dumps(response_message))
-        print("Response creation requested")
+            
+            await self.websocket.send(json.dumps(message))
+            chunk_num = (i // chunk_size) + 1
+            print(f"Sent audio chunk {chunk_num}/{total_chunks}")
+            
+            # Small delay between chunks to simulate real-time streaming
+            await asyncio.sleep(0.1)
+        
+        print("All audio chunks sent. Waiting for server VAD to detect speech end...")
+        
+        # Give server VAD time to process and detect speech end
+        await asyncio.sleep(2.0)
         
     async def listen_for_responses(self):
         """Listen for responses from OpenAI and collect audio chunks."""
