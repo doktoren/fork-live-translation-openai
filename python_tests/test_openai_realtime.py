@@ -61,12 +61,22 @@ class OpenAIRealtimeTest:
             except:
                 print("Could not probe raw audio file - treating as G.711 μ-law")
             
-            # Convert raw G.711 μ-law to MP3
-            # Specify the input format explicitly since it's raw audio data
+            # Convert raw G.711 μ-law to MP3 with enhanced quality
+            # Apply audio filters to improve quality and upsample for better output
             (
                 ffmpeg
                 .input(input_file, f='mulaw', ar=8000, ac=1)
-                .output(output_file, acodec='libmp3lame', ar=8000, ac=1)
+                .filter('volume', '1.5')  # Boost volume slightly
+                .filter('highpass', f=80)  # Remove low-frequency noise
+                .filter('lowpass', f=3400)  # Remove high-frequency noise (G.711 bandwidth limit)
+                .output(
+                    output_file, 
+                    acodec='libmp3lame',  # Use LAME encoder for better quality
+                    ar=22050,  # Upsample for better quality (but not too high to avoid artifacts)
+                    ac=1,  # Mono
+                    audio_bitrate='128k',  # Good bitrate for speech
+                    q='2'  # High quality setting for LAME
+                )
                 .overwrite_output()
                 .run(capture_stdout=True, capture_stderr=True)
             )

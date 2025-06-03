@@ -87,8 +87,24 @@ class OpenAIRealtimeTranslator:
         await self.websocket.send(json.dumps(message))
         print("Audio data sent to OpenAI")
         
-        # With server VAD, we don't need to manually commit or create response
-        # The server will automatically detect speech end and create response
+        # Commit the audio buffer
+        commit_message = {'type': 'input_audio_buffer.commit'}
+        await self.websocket.send(json.dumps(commit_message))
+        print("Audio buffer committed")
+
+        # Wait a moment for processing
+        await asyncio.sleep(0.5)
+
+        # Manually create response (even with server VAD, this helps ensure response generation)
+        response_message = {
+            'type': 'response.create',
+            'response': {
+                'modalities': ['text', 'audio'],
+                'instructions': 'Translate the provided audio to Danish. Respond only with the translation.'
+            }
+        }
+        await self.websocket.send(json.dumps(response_message))
+        print("Response creation requested")
         
     async def listen_for_responses(self):
         """Listen for responses from OpenAI and collect audio chunks."""
@@ -227,12 +243,22 @@ def save_audio_chunks_as_mp3(audio_chunks: list, output_file: str):
         except:
             print("Could not probe raw audio file - treating as G.711 μ-law")
         
-        # Convert raw G.711 μ-law to MP3
-        # The audio from OpenAI should be G.711 μ-law format
+        # Convert raw G.711 μ-law to MP3 with enhanced quality
+        # Apply audio filters to improve quality and upsample for better output
         (
             ffmpeg
             .input(temp_path, f='mulaw', ar=8000, ac=1)
-            .output(output_file, acodec='libmp3lame', ar=8000, ac=1)
+            .filter('volume', '1.5')  # Boost volume slightly
+            .filter('highpass', f=80)  # Remove low-frequency noise
+            .filter('lowpass', f=3400)  # Remove high-frequency noise (G.711 bandwidth limit)
+            .output(
+                output_file, 
+                acodec='libmp3lame',  # Use LAME encoder for better quality
+                ar=22050,  # Upsample for better quality (but not too high to avoid artifacts)
+                ac=1,  # Mono
+                audio_bitrate='128k',  # Good bitrate for speech
+                q='2'  # High quality setting for LAME
+            )
             .overwrite_output()
             .run(capture_stdout=True, capture_stderr=True)
         )
