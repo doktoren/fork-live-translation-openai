@@ -1,0 +1,43 @@
+<speak xml:lang="da-DK">
+  Hej, det er Thomas fra SuperBrugsen i Randers.
+  <break time="10s"/> <!-- English: "Hi Thomas, thanks for calling..." -->
+
+  Jeg står ude ved fryseren i mejeriafdelingen –
+  jeres system bliver ved med at sende alarmer, selvom temperaturen er stabil.
+  <break time="11s"/> <!-- English: "You're saying the alarm is triggering..." -->
+
+  Ja præcis.
+  <break time="9s"/> <!-- English: "Got it. Let me pull up the logs..." -->
+
+  Jeg har målt med vores egen føler, og den siger minus atten komma fem grader,
+  hvilket er helt fint.
+  <break time="11s"/> <!-- English: "I see repeated alerts..." -->
+
+  Det passer – det var cirka der jeg fik den første SMS.
+  <break time="10s"/> <!-- English: "Did you power-cycle just the sensor..." -->
+
+  Jeg har genstartet enheden og tjekket dørtætningerne.
+  Alt ser normalt ud.
+  <break time="11s"/> <!-- English: "It might be a drift issue..." -->
+
+  Kun sensoren.
+  <break time="2s"/>
+  Kontrolleren sad højt oppe, og jeg ville helst ikke afbryde hele systemet midt i åbningstiden.
+  <break time="11s"/> <!-- English: "Can you send me a photo..." -->
+
+  Selvfølgelig, to sekunder...
+  <break time="5s"/> <!-- Photo action -->
+
+  Der, jeg har sendt den til support snabel-a tempmon punktum dk.
+  <break time="11s"/> <!-- English: "Received. I see the internal reading..." -->
+
+  Okay, så skal jeg bare skifte føleren ud?
+  <break time="10s"/> <!-- English: "Yes, I’ll send you a replacement..." -->
+
+  Perfekt.
+  <break time="2s"/>
+  Tak for hjælpen – det var alt, hvad jeg havde brug for.
+  <break time="9s"/> <!-- English: "You're welcome, Thomas..." -->
+
+  I lige måde.
+</speak>
