@@ -4,6 +4,16 @@ This folder contains Python test scripts for testing the OpenAI Realtime API tra
 
 ## Setup
 
+### Option 1: Using uv (Recommended)
+
+1. Install dependencies using uv:
+```bash
+cd python_tests
+uv sync --no-install-project
+```
+
+### Option 2: Using pip
+
 1. Install required Python packages:
 ```bash
 pip install websockets ffmpeg-python
@@ -36,6 +46,21 @@ This script tests the OpenAI Realtime API by:
 7. Saving the result as `test/agent_translated.mp3`
 
 ### Usage
+
+#### Using uv (Recommended)
+
+```bash
+# Make sure you're in the project root directory
+cd /path/to/fork-live-translation-openai
+
+# Set your OpenAI API key
+export OPENAI_API_KEY='your-api-key-here'
+
+# Run the test using uv
+uv run --project python_tests python_tests/test_openai_realtime.py
+```
+
+#### Using Python directly
 
 ```bash
 # Make sure you're in the project root directory
@@ -96,6 +121,14 @@ Output: test/agent_translated.mp3
 ## Verification Script: verify_audio_conversion.py
 
 This script tests the audio conversion pipeline without requiring an OpenAI API key:
+
+#### Using uv (Recommended)
+
+```bash
+uv run --project python_tests python_tests/verify_audio_conversion.py
+```
+
+#### Using Python directly
 
 ```bash
 python python_tests/verify_audio_conversion.py
