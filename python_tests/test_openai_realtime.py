@@ -229,8 +229,8 @@ async def main():
         return
     
     # File paths
-    input_file = 'python_tests/test/agent.mp3'
-    output_file = 'python_tests/test/agent_translated.mp3'
+    input_file = 'test/agent.mp3'
+    output_file = 'test/agent_translated.mp3'
     
     # Check if input file exists
     if not os.path.exists(input_file):
