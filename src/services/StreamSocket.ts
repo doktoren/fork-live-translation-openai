@@ -174,10 +174,19 @@ export default class StreamSocket {
    */
   private onMessage = (message: unknown) => {
     const parse = () => {
+      let messageStr: string;
+      
       if (typeof message === 'string') {
-        return JSON.parse(message.toString()) as AudioMessage;
+        messageStr = message;
+      } else if (Buffer.isBuffer(message)) {
+        messageStr = message.toString('utf8');
+      } else if (message && typeof message === 'object' && 'toString' in message) {
+        messageStr = (message as any).toString();
+      } else {
+        throw new Error(`Unsupported message type: ${typeof message}`);
       }
-      return JSON.parse(message.toString()) as AudioMessage;
+      
+      return JSON.parse(messageStr) as AudioMessage;
     };
 
     try {
@@ -202,9 +211,20 @@ export default class StreamSocket {
         this.logger.error('Unknown event: %s', JSON.stringify(parsed));
       }
     } catch (error) {
-      this.logger.error('Error parsing message1', { error });
-      this.logger.error('Error is1 %s', JSON.stringify(error));
-      this.logger.error('Message is1 %s', JSON.stringify(message));
+      this.logger.error('Error parsing WebSocket message', { 
+        error: error instanceof Error ? error.message : String(error),
+        messageType: typeof message,
+        messageLength: Buffer.isBuffer(message) ? message.length : (typeof message === 'string' ? message.length : 'unknown')
+      });
+      
+      // Log the raw message for debugging, but limit size to prevent log spam
+      if (Buffer.isBuffer(message)) {
+        this.logger.error('Raw message (Buffer): %s', message.toString('utf8', 0, Math.min(500, message.length)));
+      } else if (typeof message === 'string') {
+        this.logger.error('Raw message (String): %s', message.substring(0, 500));
+      } else {
+        this.logger.error('Raw message (Other): %s', JSON.stringify(message).substring(0, 500));
+      }
     }
   };
 }

@@ -264,9 +264,10 @@ export default class AudioInterceptor {
 
     // Event listeners for when a message is received from the server
     callerSocket.on('message', (msg) => {
-      this.logger.info(`Caller message from OpenAI: ${msg}`);
-      const currentTime = new Date().getTime();
-      const message = JSON.parse(msg) as OpenAIMessage;
+      try {
+        this.logger.info(`Caller message from OpenAI: ${msg}`);
+        const currentTime = new Date().getTime();
+        const message = JSON.parse(msg.toString()) as OpenAIMessage;
       
       // Track translation state for audio mixing
       if (message.type === 'response.created') {
@@ -304,11 +305,19 @@ export default class AudioInterceptor {
         }
         this.sendAlignedAudio(this.#agentSocket, message.delta!, currentTime);
       }
+      } catch (error) {
+        this.logger.error('Error processing caller OpenAI message', {
+          error: error instanceof Error ? error.message : String(error),
+          messageType: typeof msg,
+          messageLength: msg ? msg.toString().length : 0
+        });
+      }
     });
     agentSocket.on('message', (msg) => {
-      this.logger.info(`Agent message from OpenAI: ${msg.toString()}`);
-      const currentTime = new Date().getTime();
-      const message = JSON.parse(msg) as OpenAIMessage;
+      try {
+        this.logger.info(`Agent message from OpenAI: ${msg.toString()}`);
+        const currentTime = new Date().getTime();
+        const message = JSON.parse(msg.toString()) as OpenAIMessage;
       
       // Track translation state for audio mixing
       if (message.type === 'response.created') {
@@ -345,6 +354,13 @@ export default class AudioInterceptor {
           ].first_audio_buffer_add_time = currentTime;
         }
         this.sendAlignedAudio(this.#callerSocket, message.delta!, currentTime);
+      }
+      } catch (error) {
+        this.logger.error('Error processing agent OpenAI message', {
+          error: error instanceof Error ? error.message : String(error),
+          messageType: typeof msg,
+          messageLength: msg ? msg.toString().length : 0
+        });
       }
     });
 
@@ -401,7 +417,12 @@ export default class AudioInterceptor {
    * Sends audio with proper alignment and timing to prevent stuttering
    * Addresses Problem 2: Audio stutter and alignment issues
    */
-  private sendAlignedAudio(socket: StreamSocket, audioPayload: string, timestamp: number) {
+  private sendAlignedAudio(socket: StreamSocket | null, audioPayload: string, timestamp: number) {
+    if (!socket || !socket.socket || socket.socket.readyState !== WebSocket.OPEN) {
+      this.logger.debug('Socket is not available or not open, skipping audio send');
+      return;
+    }
+
     try {
       // Align audio to G.711 frame boundaries to prevent clicks/pops
       const alignedAudio = this.alignAudioFrames(audioPayload);
@@ -412,8 +433,14 @@ export default class AudioInterceptor {
       this.logger.debug(`Sent aligned audio chunk: ${alignedAudio.length} bytes at timestamp ${timestamp}`);
     } catch (error) {
       this.logger.error('Error sending aligned audio:', error);
-      // Fallback to original method if alignment fails
-      socket.send([audioPayload]);
+      // Fallback to original method if alignment fails and socket is still available
+      if (socket && socket.socket && socket.socket.readyState === WebSocket.OPEN) {
+        try {
+          socket.send([audioPayload]);
+        } catch (fallbackError) {
+          this.logger.error('Error in fallback audio send:', fallbackError);
+        }
+      }
     }
   }
 
