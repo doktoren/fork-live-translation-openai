@@ -69,11 +69,7 @@ class OpenAIRealtimeTranslator:
                 'instructions': agent_prompt,
                 'input_audio_format': 'g711_ulaw',
                 'output_audio_format': 'g711_ulaw',
-                'turn_detection': {
-                    'type': 'server_vad', 
-                    'threshold': 0.6,
-                    'create_response': False  # We'll manually create response to ensure audio
-                },
+                'turn_detection': None,  # Disable VAD for batch processing
                 'temperature': 0.6
             }
         }
@@ -95,15 +91,22 @@ class OpenAIRealtimeTranslator:
         await self.websocket.send(json.dumps(message))
         print("Audio data sent to OpenAI")
         
-        # Let server VAD detect speech end and create response automatically
-        print("Waiting for server VAD to detect speech end and create response...")
+        # Wait a moment for all audio to be processed
+        await asyncio.sleep(1.0)
+        
+        # Manually commit the buffer to ensure all audio is processed
+        commit_message = {
+            'type': 'input_audio_buffer.commit'
+        }
+        await self.websocket.send(json.dumps(commit_message))
+        print("Audio buffer committed manually - waiting for all speech detection to complete...")
         
     async def listen_for_responses(self):
         """Listen for responses from OpenAI and collect audio chunks."""
         print("Listening for responses...")
         
         response_started = False
-        response_created = False  # Track if we've already created a response
+        buffer_committed = False
         
         while True:
             try:
@@ -119,31 +122,24 @@ class OpenAIRealtimeTranslator:
                 elif data.get('type') == 'session.updated':
                     print("Session updated successfully")
                 
-                elif data.get('type') == 'input_audio_buffer.speech_started':
-                    print("Speech detection started")
-                
-                elif data.get('type') == 'input_audio_buffer.speech_stopped':
-                    print("Speech detection stopped")
-                
                 elif data.get('type') == 'input_audio_buffer.committed':
-                    print("Audio buffer committed by server")
-                
-                elif data.get('type') == 'conversation.item.created':
-                    print("Conversation item created")
+                    print("Audio buffer committed")
+                    buffer_committed = True
                     
-                    # Only create ONE response for the entire conversation
-                    # Server VAD may detect multiple speech segments, but we only want one response
-                    if not response_created and not response_started:
-                        print("Creating single response for all detected speech...")
+                    # Create response immediately after buffer is committed (like main script)
+                    if not response_started:
+                        print("Creating response for translation...")
                         response_message = {
                             'type': 'response.create',
                             'response': {
                                 'modalities': ['text', 'audio'],
-                                'instructions': 'Translate all the provided audio to Danish. Respond only with the translation in audio format.'
+                                'instructions': 'Translate the provided audio to Danish. Respond only with the translation in audio format.'
                             }
                         }
                         await self.websocket.send(json.dumps(response_message))
-                        response_created = True
+                
+                elif data.get('type') == 'conversation.item.created':
+                    print("Conversation item created")
                 
                 elif data.get('type') == 'response.created':
                     print("Response creation started")
