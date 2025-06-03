@@ -94,7 +94,7 @@ class OpenAIRealtimeTest:
                 'instructions': agent_prompt,
                 'input_audio_format': 'g711_ulaw',
                 'output_audio_format': 'g711_ulaw',
-                'turn_detection': {'type': 'server_vad', 'threshold': 0.6},
+                'turn_detection': None,  # Disable automatic turn detection to prevent feedback
                 'temperature': 0.6
             }
         }
@@ -119,8 +119,16 @@ class OpenAIRealtimeTest:
         await self.websocket.send(json.dumps(commit_message))
         print("Audio buffer committed")
         
-        # Note: No explicit response.create needed - server VAD will automatically
-        # trigger response generation when speech is detected and stops
+        # Manually create a response since we disabled turn detection
+        response_message = {
+            'type': 'response.create',
+            'response': {
+                'modalities': ['text', 'audio'],
+                'instructions': 'Translate the audio to Danish and respond with audio only.'
+            }
+        }
+        await self.websocket.send(json.dumps(response_message))
+        print("Response creation requested")
     
     async def listen_for_responses(self):
         """Listen for responses from OpenAI and collect audio chunks."""
