@@ -57,8 +57,8 @@ async def main():
     print("=" * 50)
     
     # File paths
-    input_file = 'test/agent.mp3'
-    test_output = 'test/agent_conversion_test.mp3'
+    input_file = 'python_tests/test/agent.mp3'
+    test_output = 'python_tests/test/agent_conversion_test.mp3'
     
     # Check if input file exists
     if not os.path.exists(input_file):

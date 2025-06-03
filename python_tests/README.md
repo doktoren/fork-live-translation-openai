@@ -135,7 +135,7 @@ python python_tests/verify_audio_conversion.py
 ```
 
 This will:
-1. Convert `test/agent.mp3` to G.711 μ-law format
+1. Convert `python_tests/test/agent.mp3` to G.711 μ-law format
 2. Convert it back to MP3 format
 3. Verify that the conversion pipeline is working correctly
 

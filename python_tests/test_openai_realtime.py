@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Test script for OpenAI Realtime API translation.
-Converts test/agent.mp3 to g711_ulaw format, sends it to OpenAI for translation to Danish,
-and saves the result as test/agent_translated.mp3.
+Converts python_tests/test/agent.mp3 to g711_ulaw format, sends it to OpenAI for translation to Danish,
+and saves the result as python_tests/test/agent_translated.mp3.
 """
 
 import asyncio
@@ -118,6 +118,17 @@ class OpenAIRealtimeTest:
         }
         await self.websocket.send(json.dumps(commit_message))
         print("Audio buffer committed")
+        
+        # Request response generation
+        response_create = {
+            'type': 'response.create',
+            'response': {
+                'modalities': ['audio'],
+                'instructions': 'Please translate the audio to Danish and respond with audio.'
+            }
+        }
+        await self.websocket.send(json.dumps(response_create))
+        print("Response generation requested")
     
     async def listen_for_responses(self):
         """Listen for responses from OpenAI and collect audio chunks."""
@@ -218,8 +229,8 @@ async def main():
         return
     
     # File paths
-    input_file = 'test/agent.mp3'
-    output_file = 'test/agent_translated.mp3'
+    input_file = 'python_tests/test/agent.mp3'
+    output_file = 'python_tests/test/agent_translated.mp3'
     
     # Check if input file exists
     if not os.path.exists(input_file):
