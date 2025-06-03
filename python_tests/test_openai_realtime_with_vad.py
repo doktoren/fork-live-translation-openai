@@ -192,30 +192,54 @@ def save_audio_chunks_as_mp3(audio_chunks: list, output_file: str):
         print("No audio chunks to save")
         return False
     
+    print(f"Combining {len(audio_chunks)} audio chunks...")
+    
     # Combine all audio chunks
     combined_audio = ''.join(audio_chunks)
-    audio_data = base64.b64decode(combined_audio)
     
-    # Save as temporary WAV file first
-    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
+    try:
+        audio_data = base64.b64decode(combined_audio)
+        print(f"Decoded audio data: {len(audio_data)} bytes")
+        print(f"First 20 bytes: {audio_data[:20].hex()}")
+    except Exception as e:
+        print(f"Error decoding audio data: {e}")
+        return False
+    
+    # Save as temporary raw audio file first
+    with tempfile.NamedTemporaryFile(suffix='.raw', delete=False) as temp_file:
         temp_path = temp_file.name
         temp_file.write(audio_data)
     
+    print(f"Saved raw audio data to: {temp_path}")
+    
     try:
-        # Convert WAV to MP3
+        # First, let's check what format the raw audio is in
+        try:
+            probe = ffmpeg.probe(temp_path)
+            print(f"Raw audio file info: {probe}")
+        except:
+            print("Could not probe raw audio file - treating as G.711 μ-law")
+        
+        # Convert raw G.711 μ-law to MP3
+        # The audio from OpenAI should be G.711 μ-law format
         (
             ffmpeg
-            .input(temp_path)
-            .output(output_file, acodec='mp3')
+            .input(temp_path, f='mulaw', ar=8000, ac=1)
+            .output(output_file, acodec='libmp3lame', ar=8000, ac=1)
             .overwrite_output()
-            .run(quiet=True)
+            .run(capture_stdout=True, capture_stderr=True)
         )
         
         print(f"Saved translated audio as: {output_file}")
         return True
     
-    except Exception as e:
+    except ffmpeg.Error as e:
         print(f"Error converting audio to MP3: {e}")
+        print(f"FFmpeg stdout: {e.stdout.decode() if e.stdout else 'None'}")
+        print(f"FFmpeg stderr: {e.stderr.decode() if e.stderr else 'None'}")
+        return False
+    except Exception as e:
+        print(f"Unexpected error converting audio: {e}")
         return False
     
     finally:

@@ -52,18 +52,29 @@ class OpenAIRealtimeTest:
             raise
     
     async def convert_g711_ulaw_to_mp3(self, input_file: str, output_file: str):
-        """Convert G.711 μ-law format back to MP3."""
+        """Convert raw G.711 μ-law format back to MP3."""
         try:
+            # First, let's try to probe the file
+            try:
+                probe = ffmpeg.probe(input_file)
+                print(f"Input file info: {probe}")
+            except:
+                print("Could not probe raw audio file - treating as G.711 μ-law")
+            
+            # Convert raw G.711 μ-law to MP3
+            # Specify the input format explicitly since it's raw audio data
             (
                 ffmpeg
-                .input(input_file)
+                .input(input_file, f='mulaw', ar=8000, ac=1)
                 .output(output_file, acodec='libmp3lame', ar=8000, ac=1)
                 .overwrite_output()
-                .run(quiet=True)
+                .run(capture_stdout=True, capture_stderr=True)
             )
             print(f"Converted G.711 μ-law to MP3: {output_file}")
         except ffmpeg.Error as e:
             print(f"Error converting audio: {e}")
+            print(f"FFmpeg stdout: {e.stdout.decode() if e.stdout else 'None'}")
+            print(f"FFmpeg stderr: {e.stderr.decode() if e.stderr else 'None'}")
             raise
     
     def read_audio_file_as_base64(self, file_path: str) -> str:
@@ -196,17 +207,20 @@ class OpenAIRealtimeTest:
         # Decode base64 audio data
         try:
             audio_data = base64.b64decode(combined_audio)
+            print(f"Decoded audio data: {len(audio_data)} bytes")
+            print(f"First 20 bytes: {audio_data[:20].hex()}")
         except Exception as e:
             print(f"Error decoding audio data: {e}")
             return False
         
-        # Save to temporary G.711 μ-law file
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
+        # Save to temporary raw audio file
+        with tempfile.NamedTemporaryFile(suffix='.raw', delete=False) as temp_file:
             temp_file.write(audio_data)
             temp_g711_file = temp_file.name
+            print(f"Saved raw audio data to: {temp_g711_file}")
         
         try:
-            # Convert G.711 μ-law to MP3
+            # Convert raw G.711 μ-law to MP3
             await self.convert_g711_ulaw_to_mp3(temp_g711_file, output_file)
             print(f"Translated audio saved to: {output_file}")
             return True
@@ -229,8 +243,8 @@ async def main():
         return
     
     # File paths
-    input_file = 'python_tests/test/agent.mp3'
-    output_file = 'python_tests/test/agent_translated.mp3'
+    input_file = 'test/agent.mp3'
+    output_file = 'test/agent_translated.mp3'
     
     # Check if input file exists
     if not os.path.exists(input_file):
