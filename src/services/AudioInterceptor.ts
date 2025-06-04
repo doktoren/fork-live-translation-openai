@@ -319,6 +319,12 @@ export default class AudioInterceptor {
           this.logger.info(
             'Caller translation completed - resuming untranslated audio forwarding',
           );
+          
+          // Clear the input audio buffer to prevent audio accumulation and repetition
+          this.sendMessageToOpenAI(this.#callerOpenAISocket!, {
+            type: 'input_audio_buffer.clear'
+          });
+          this.logger.info('Cleared caller input audio buffer to prevent repetition');
         }
 
         if (message.type === 'input_audio_buffer.speech_stopped') {
@@ -378,6 +384,12 @@ export default class AudioInterceptor {
           this.logger.info(
             'Agent translation completed - resuming untranslated audio forwarding',
           );
+          
+          // Clear the input audio buffer to prevent audio accumulation and repetition
+          this.sendMessageToOpenAI(this.#agentOpenAISocket!, {
+            type: 'input_audio_buffer.clear'
+          });
+          this.logger.info('Cleared agent input audio buffer to prevent repetition');
         }
 
         if (message.type === 'input_audio_buffer.speech_stopped') {
