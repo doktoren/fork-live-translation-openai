@@ -17,9 +17,7 @@ docker run -it --rm --pull=always \
     -e GITHUB_TOKEN=$GITHUB_TOKEN \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v $(pwd)/.openhands-state:/.openhands-state \
-    -p 3000:3000 \
-    --sysctl net.ipv6.conf.all.disable_ipv6=1 \
-    --sysctl net.ipv6.conf.default.disable_ipv6=1 \
     --add-host host.docker.internal:host-gateway \
+    --network=host \
     --name openhands-app \
     docker.all-hands.dev/all-hands-ai/openhands:0.40
