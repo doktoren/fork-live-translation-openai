@@ -319,12 +319,6 @@ export default class AudioInterceptor {
           this.logger.info(
             'Caller translation completed - resuming untranslated audio forwarding',
           );
-          
-          // Clear the input audio buffer to prevent audio accumulation and repetition
-          this.sendMessageToOpenAI(this.#callerOpenAISocket!, {
-            type: 'input_audio_buffer.clear'
-          });
-          this.logger.info('Cleared caller input audio buffer to prevent repetition');
         }
 
         if (message.type === 'input_audio_buffer.speech_stopped') {
@@ -335,6 +329,13 @@ export default class AudioInterceptor {
             message_id: message.event_id,
             vad_speech_stopped_time: currentTime,
           });
+          
+          // Clear the input audio buffer after speech stops to prevent audio accumulation
+          // This ensures we don't clear mid-speech and lose audio that's still being processed
+          this.sendMessageToOpenAI(this.#callerOpenAISocket!, {
+            type: 'input_audio_buffer.clear'
+          });
+          this.logger.info('Cleared caller input audio buffer after speech stopped');
         }
 
         if (message.type === 'response.audio.delta') {
@@ -384,12 +385,6 @@ export default class AudioInterceptor {
           this.logger.info(
             'Agent translation completed - resuming untranslated audio forwarding',
           );
-          
-          // Clear the input audio buffer to prevent audio accumulation and repetition
-          this.sendMessageToOpenAI(this.#agentOpenAISocket!, {
-            type: 'input_audio_buffer.clear'
-          });
-          this.logger.info('Cleared agent input audio buffer to prevent repetition');
         }
 
         if (message.type === 'input_audio_buffer.speech_stopped') {
@@ -400,6 +395,13 @@ export default class AudioInterceptor {
             message_id: message.event_id,
             vad_speech_stopped_time: currentTime,
           });
+          
+          // Clear the input audio buffer after speech stops to prevent audio accumulation
+          // This ensures we don't clear mid-speech and lose audio that's still being processed
+          this.sendMessageToOpenAI(this.#agentOpenAISocket!, {
+            type: 'input_audio_buffer.clear'
+          });
+          this.logger.info('Cleared agent input audio buffer after speech stopped');
         }
 
         if (message.type === 'response.audio.delta') {
