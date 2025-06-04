@@ -239,15 +239,12 @@ export default class AudioInterceptor {
         input_audio_format: 'g711_ulaw',
         output_audio_format: 'g711_ulaw',
         // input_audio_transcription: {model: 'whisper-1'},
-        turn_detection: { type: 'server_vad', threshold: 0.6 },
-        // {
-        //   "type": "server_vad",
-        //   "threshold": 0.5,
-        //   "prefix_padding_ms": 300,
-        //   "silence_duration_ms": 500,
-        //   "create_response": true, // only in conversation mode
-        //   "interrupt_response": true, // only in conversation mode
-        // }
+        turn_detection: { 
+          type: 'server_vad', 
+          threshold: 0.6,
+          create_response: true,
+          interrupt_response: false  // Prevent interrupting ongoing translations
+        },
         // turn_detection: {
         //   'type': 'semantic_vad',
         //   'eagerness': 'high',  // "low" | "medium" | "high" | "auto", // optional
@@ -266,13 +263,12 @@ export default class AudioInterceptor {
         input_audio_format: 'g711_ulaw',
         output_audio_format: 'g711_ulaw',
         // input_audio_transcription: {model: 'whisper-1'},
-        turn_detection: { type: 'server_vad', threshold: 0.6 },
-        // turn_detection: {
-        //   'type': 'semantic_vad',
-        //   'eagerness': 'high',  // "low" | "medium" | "high" | "auto", // optional
-        //   // 'create_response': true, // only in conversation mode
-        //   // 'interrupt_response': true, // only in conversation mode
-        // },
+        turn_detection: { 
+          type: 'server_vad', 
+          threshold: 0.6,
+          create_response: true,
+          interrupt_response: false  // Prevent interrupting ongoing translations
+        },
         // Setting temperature to minimum allowed value to get deterministic translation results
         temperature: 0.6,
       },
