@@ -155,6 +155,7 @@ export default class StreamSocket {
         payload,
       },
     };
+
     this.socket.send(JSON.stringify(mediaMessage));
     if (isLast) {
       const markMessage = {
