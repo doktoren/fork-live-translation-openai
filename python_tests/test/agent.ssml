@@ -1,43 +1,49 @@
 <speak xml:lang="en-US">
   Hi Thomas, thanks for calling.
-  <break time="5s"/> <!-- Danish: "Jeg står ude ved fryseren..." -->
-
+  <!-- Now at offset 2 seconds -->
+  <break time="5s"/>
   You're saying the alarm is triggering even though the temperature is within the expected range?
+  <!-- Now at offset 12 seconds -->
   <break time="1s"/>
   I will continue talking for a bit longer just to check how it works with semantic voice activity detection.
-  <break time="3s"/> <!-- Danish: "Ja præcis. Jeg har målt med vores egen føler..." -->
-
+  <!-- Now at offset 19 seconds -->
+  <break time="3s"/>
   Got it.
+  <!-- Now at offset 23 seconds -->
   <break time="2s"/>
   Let me pull up the logs...
-  <break time="5s"/> <!-- Danish: "Det passer – det var cirka der..." -->
-
+  <!-- Now at offset 27 seconds -->
+  <break time="5s"/>
   Okay, I see repeated alerts for unit FZ-MJ-3, starting around six thirty this morning.
-  <break time="1s"/> <!-- Danish: "Jeg har genstartet enheden..." -->
-
+  <!-- Now at offset 38 seconds -->
+  <break time="1s"/>
   And you mentioned restarting—did you power-cycle just the sensor or the whole controller?
-  <break time="10s"/> <!-- Danish: "Kun sensoren. Kontrolleren sad højt oppe..." -->
-
+  <!-- Now at offset 44 seconds -->
+  <break time="10s"/>
   Understood.
+  <!-- Now at offset 55 seconds -->
   <break time="2s"/>
   It might be a drift issue.
   I’ll disable auto-escalation for this unit temporarily.
-  <break time="10s"/> <!-- Danish: waiting -->
-
+  <!-- Now at offset 63 seconds -->
+  <break time="10s"/>
   Can you send me a photo of the display on the controller?
-  <break time="11s"/> <!-- Danish: "Selvfølgelig, to sekunder... Der, jeg har sendt..." -->
-
+  <!-- Now at offset 76 seconds -->
+  <break time="11s"/>
   Received.
+  <!-- Now at offset 87 seconds -->
   <break time="2s"/>
   Thanks.
   I see the internal reading says minus twelve point seven degrees Celsius,
   which doesn't match your probe.
-  <break time="10s"/> <!-- Danish: "Okay, så skal jeg bare skifte føleren ud?" -->
-
+  <!-- Now at offset 96 seconds -->
+  <break time="10s"/>
   Yes, I’ll send you a replacement sensor.
   In the meantime, I’ll flag this unit to ignore alerts below minus ten degrees until tomorrow.
-  <break time="10s"/> <!-- Danish: "Perfekt. Tak for hjælpen..." -->
-
+  <!-- Now at offset 115 seconds -->
+  <break time="10s"/>
   You're welcome, Thomas.
   Have a good day.
+  <!-- Now at offset 128 seconds -->
 </speak>
+
