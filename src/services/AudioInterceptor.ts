@@ -70,6 +70,14 @@ export default class AudioInterceptor {
     { payload: string; timestamp: number; sequenceNumber: number }[]
   >();
 
+  // Timing compensation for maintaining proper audio timing
+  #callerLastSpeechTimestamp?: number;
+  #agentLastSpeechTimestamp?: number;
+  #callerTranslationStartTime?: number;
+  #agentTranslationStartTime?: number;
+  #callerSpeechStartTimestamp?: number;
+  #agentSpeechStartTimestamp?: number;
+
   public constructor(options: AudioInterceptorOptions) {
     this.logger = options.logger;
     this.config = options.config;
@@ -104,6 +112,14 @@ export default class AudioInterceptor {
     this.#callerActiveResponseId = undefined;
     this.#agentActiveResponseId = undefined;
     this.#audioBuffer.clear();
+    
+    // Reset timing compensation state
+    this.#callerLastSpeechTimestamp = undefined;
+    this.#agentLastSpeechTimestamp = undefined;
+    this.#callerTranslationStartTime = undefined;
+    this.#agentTranslationStartTime = undefined;
+    this.#callerSpeechStartTimestamp = undefined;
+    this.#agentSpeechStartTimestamp = undefined;
 
     const callerTime = this.reportOnSocketTimeToFirstAudioBufferAdd(
       this.#callerMessages,
@@ -132,6 +148,14 @@ export default class AudioInterceptor {
   }
 
   private translateAndForwardAgentAudio(message: MediaBaseAudioMessage) {
+    const currentTimestamp = parseInt(message.media.timestamp);
+    
+    // Track speech timing for compensation
+    if (!this.#agentSpeechStartTimestamp) {
+      this.#agentSpeechStartTimestamp = currentTimestamp;
+    }
+    this.#agentLastSpeechTimestamp = currentTimestamp;
+    
     // Audio Mixing/Replacement: Only forward untranslated audio if no translation is active
     if (
       this.config.FORWARD_AUDIO_BEFORE_TRANSLATION === 'true' &&
@@ -140,7 +164,6 @@ export default class AudioInterceptor {
       this.sendAlignedAudio(
         this.#callerSocket,
         message.media.payload,
-        parseInt(message.media.timestamp),
       );
     }
 
@@ -163,6 +186,14 @@ export default class AudioInterceptor {
   }
 
   private translateAndForwardCallerAudio(message: MediaBaseAudioMessage) {
+    const currentTimestamp = parseInt(message.media.timestamp);
+    
+    // Track speech timing for compensation
+    if (!this.#callerSpeechStartTimestamp) {
+      this.#callerSpeechStartTimestamp = currentTimestamp;
+    }
+    this.#callerLastSpeechTimestamp = currentTimestamp;
+    
     // Audio Mixing/Replacement: Only forward untranslated audio if no translation is active
     if (
       this.config.FORWARD_AUDIO_BEFORE_TRANSLATION === 'true' &&
@@ -171,7 +202,6 @@ export default class AudioInterceptor {
       this.sendAlignedAudio(
         this.#agentSocket,
         message.media.payload,
-        parseInt(message.media.timestamp),
       );
     }
 
@@ -305,6 +335,7 @@ export default class AudioInterceptor {
         if (message.type === 'response.created') {
           this.#callerTranslationActive = true;
           this.#callerActiveResponseId = message.response?.id;
+          this.#callerTranslationStartTime = currentTime;
           this.logger.info(
             'Caller translation started - blocking untranslated audio forwarding',
           );
@@ -316,6 +347,12 @@ export default class AudioInterceptor {
         ) {
           this.#callerTranslationActive = false;
           this.#callerActiveResponseId = undefined;
+          this.#callerTranslationStartTime = undefined;
+          
+          // Reset timing state after translation to prevent long-term drift
+          this.#callerSpeechStartTimestamp = undefined;
+          this.#callerLastSpeechTimestamp = undefined;
+          
           this.logger.info(
             'Caller translation completed - resuming untranslated audio forwarding',
           );
@@ -330,8 +367,11 @@ export default class AudioInterceptor {
             vad_speech_stopped_time: currentTime,
           });
           
+          // Reset speech start timestamp for next speech segment
+          this.#callerSpeechStartTimestamp = undefined;
+          
           // Clear the input audio buffer after speech stops to prevent audio accumulation
-          // This ensures we don't clear mid-speech and lose audio that's still being processed
+          // This is critical for preventing delay buildup between translation cycles
           this.sendMessageToOpenAI(this.#callerOpenAISocket!, {
             type: 'input_audio_buffer.clear'
           });
@@ -351,7 +391,9 @@ export default class AudioInterceptor {
               this.#callerMessages.length - 1
             ].first_audio_buffer_add_time = currentTime;
           }
-          this.sendAlignedAudio(this.#agentSocket, message.delta!, currentTime);
+          // Track translation timing to detect delay accumulation
+          this.trackTranslationTiming('caller', currentTime);
+          this.sendAlignedAudio(this.#agentSocket, message.delta!);
         }
       } catch (error) {
         this.logger.error('Error processing caller OpenAI message', {
@@ -371,6 +413,7 @@ export default class AudioInterceptor {
         if (message.type === 'response.created') {
           this.#agentTranslationActive = true;
           this.#agentActiveResponseId = message.response?.id;
+          this.#agentTranslationStartTime = currentTime;
           this.logger.info(
             'Agent translation started - blocking untranslated audio forwarding',
           );
@@ -382,6 +425,12 @@ export default class AudioInterceptor {
         ) {
           this.#agentTranslationActive = false;
           this.#agentActiveResponseId = undefined;
+          this.#agentTranslationStartTime = undefined;
+          
+          // Reset timing state after translation to prevent long-term drift
+          this.#agentSpeechStartTimestamp = undefined;
+          this.#agentLastSpeechTimestamp = undefined;
+          
           this.logger.info(
             'Agent translation completed - resuming untranslated audio forwarding',
           );
@@ -396,8 +445,11 @@ export default class AudioInterceptor {
             vad_speech_stopped_time: currentTime,
           });
           
+          // Reset speech start timestamp for next speech segment
+          this.#agentSpeechStartTimestamp = undefined;
+          
           // Clear the input audio buffer after speech stops to prevent audio accumulation
-          // This ensures we don't clear mid-speech and lose audio that's still being processed
+          // This is critical for preventing delay buildup between translation cycles
           this.sendMessageToOpenAI(this.#agentOpenAISocket!, {
             type: 'input_audio_buffer.clear'
           });
@@ -417,10 +469,11 @@ export default class AudioInterceptor {
               this.#agentMessages.length - 1
             ].first_audio_buffer_add_time = currentTime;
           }
+          // Track translation timing to detect delay accumulation
+          this.trackTranslationTiming('agent', currentTime);
           this.sendAlignedAudio(
             this.#callerSocket,
             message.delta!,
-            currentTime,
           );
         }
       } catch (error) {
@@ -493,13 +546,55 @@ export default class AudioInterceptor {
   }
 
   /**
-   * Sends audio with proper alignment and timing to prevent stuttering
+   * Tracks translation timing to detect and prevent delay accumulation
+   */
+  private trackTranslationTiming(
+    side: 'caller' | 'agent',
+    currentTime: number,
+  ): void {
+    const speechStartTimestamp = side === 'caller' 
+      ? this.#callerSpeechStartTimestamp 
+      : this.#agentSpeechStartTimestamp;
+    const translationStartTime = side === 'caller' 
+      ? this.#callerTranslationStartTime 
+      : this.#agentTranslationStartTime;
+
+    if (!speechStartTimestamp || !translationStartTime) {
+      return;
+    }
+
+    // Calculate the translation processing delay
+    const translationDelay = currentTime - translationStartTime;
+    
+    // Log warning if translation delay is becoming excessive
+    if (translationDelay > 5000) {
+      this.logger.warn(
+        `Excessive translation delay detected for ${side}: ${translationDelay}ms. ` +
+        `This may indicate network or API issues.`,
+      );
+      
+      // If delay is excessive, clear the input buffer to prevent further accumulation
+      const socket = side === 'caller' ? this.#callerOpenAISocket : this.#agentOpenAISocket;
+      if (socket) {
+        this.sendMessageToOpenAI(socket, {
+          type: 'input_audio_buffer.clear'
+        });
+        this.logger.warn(`Cleared ${side} input buffer due to excessive delay`);
+      }
+    }
+    
+    this.logger.debug(
+      `Translation timing for ${side}: translation_delay=${translationDelay}ms`,
+    );
+  }
+
+  /**
+   * Sends audio with proper alignment to prevent stuttering
    * Addresses Problem 2: Audio stutter and alignment issues
    */
   private sendAlignedAudio(
     socket: StreamSocket | null,
     audioPayload: string,
-    timestamp: number,
   ) {
     if (
       !socket ||
@@ -520,7 +615,7 @@ export default class AudioInterceptor {
       socket.send([alignedAudio]);
 
       this.logger.debug(
-        `Sent aligned audio chunk: ${alignedAudio.length} bytes at timestamp ${timestamp}`,
+        `Sent aligned audio chunk: ${alignedAudio.length} bytes`,
       );
     } catch (error) {
       this.logger.error('Error sending aligned audio:', error);
