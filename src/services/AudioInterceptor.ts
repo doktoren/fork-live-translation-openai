@@ -153,6 +153,7 @@ export default class AudioInterceptor {
     // Track speech timing for compensation
     if (!this.#agentSpeechStartTimestamp) {
       this.#agentSpeechStartTimestamp = currentTimestamp;
+      this.logger.debug(`Agent speech started at timestamp: ${currentTimestamp}`);
     }
     this.#agentLastSpeechTimestamp = currentTimestamp;
     
@@ -191,6 +192,7 @@ export default class AudioInterceptor {
     // Track speech timing for compensation
     if (!this.#callerSpeechStartTimestamp) {
       this.#callerSpeechStartTimestamp = currentTimestamp;
+      this.logger.debug(`Caller speech started at timestamp: ${currentTimestamp}`);
     }
     this.#callerLastSpeechTimestamp = currentTimestamp;
     
@@ -345,7 +347,7 @@ export default class AudioInterceptor {
           this.#callerActiveResponseId = message.response?.id;
           this.#callerTranslationStartTime = currentTime;
           this.logger.info(
-            'Caller translation started - blocking untranslated audio forwarding',
+            `Caller translation started at ${currentTime} - blocking untranslated audio forwarding`,
           );
         }
 
@@ -358,6 +360,11 @@ export default class AudioInterceptor {
           this.#callerTranslationStartTime = undefined;
           
           // Reset timing state after translation to prevent long-term drift
+          this.logger.debug(
+            `Caller translation completed - resetting timing state. ` +
+            `Speech start was: ${this.#callerSpeechStartTimestamp}, ` +
+            `Last speech was: ${this.#callerLastSpeechTimestamp}`
+          );
           this.#callerSpeechStartTimestamp = undefined;
           this.#callerLastSpeechTimestamp = undefined;
           
@@ -375,8 +382,8 @@ export default class AudioInterceptor {
             vad_speech_stopped_time: currentTime,
           });
           
-          // Reset speech start timestamp for next speech segment
-          this.#callerSpeechStartTimestamp = undefined;
+          // DON'T reset speech start timestamp here - preserve it for translation timing
+          // It will be reset when translation completes (response.done/response.audio.done)
           
           // Clear the input audio buffer after speech stops to prevent audio accumulation
           // This is critical for preventing delay buildup between translation cycles
@@ -423,7 +430,7 @@ export default class AudioInterceptor {
           this.#agentActiveResponseId = message.response?.id;
           this.#agentTranslationStartTime = currentTime;
           this.logger.info(
-            'Agent translation started - blocking untranslated audio forwarding',
+            `Agent translation started at ${currentTime} - blocking untranslated audio forwarding`,
           );
         }
 
@@ -436,6 +443,11 @@ export default class AudioInterceptor {
           this.#agentTranslationStartTime = undefined;
           
           // Reset timing state after translation to prevent long-term drift
+          this.logger.debug(
+            `Agent translation completed - resetting timing state. ` +
+            `Speech start was: ${this.#agentSpeechStartTimestamp}, ` +
+            `Last speech was: ${this.#agentLastSpeechTimestamp}`
+          );
           this.#agentSpeechStartTimestamp = undefined;
           this.#agentLastSpeechTimestamp = undefined;
           
@@ -453,8 +465,8 @@ export default class AudioInterceptor {
             vad_speech_stopped_time: currentTime,
           });
           
-          // Reset speech start timestamp for next speech segment
-          this.#agentSpeechStartTimestamp = undefined;
+          // DON'T reset speech start timestamp here - preserve it for translation timing
+          // It will be reset when translation completes (response.done/response.audio.done)
           
           // Clear the input audio buffer after speech stops to prevent audio accumulation
           // This is critical for preventing delay buildup between translation cycles
@@ -568,11 +580,23 @@ export default class AudioInterceptor {
       : this.#agentTranslationStartTime;
 
     if (!speechStartTimestamp || !translationStartTime) {
+      this.logger.warn(
+        `Missing timing data for ${side}: speechStart=${speechStartTimestamp}, ` +
+        `translationStart=${translationStartTime}. Cannot track timing.`
+      );
       return;
     }
 
     // Calculate the translation processing delay
     const translationDelay = currentTime - translationStartTime;
+    const totalDelay = currentTime - speechStartTimestamp;
+    
+    // Always log timing information for analysis
+    this.logger.info(
+      `Translation timing for ${side}: speech_start=${speechStartTimestamp}, ` +
+      `translation_start=${translationStartTime}, current=${currentTime}, ` +
+      `translation_delay=${translationDelay}ms, total_delay=${totalDelay}ms`,
+    );
     
     // Log warning if translation delay is becoming excessive
     if (translationDelay > 5000) {
@@ -590,10 +614,6 @@ export default class AudioInterceptor {
         this.logger.warn(`Cleared ${side} input buffer due to excessive delay`);
       }
     }
-    
-    this.logger.debug(
-      `Translation timing for ${side}: translation_delay=${translationDelay}ms`,
-    );
   }
 
   /**
