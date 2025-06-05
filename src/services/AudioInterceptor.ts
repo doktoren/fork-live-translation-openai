@@ -452,13 +452,24 @@ export default class AudioInterceptor {
     });
   }
 
-  private reportOnSocketTimeToFirstAudioBufferAdd(messages: BufferedMessage[]) {
+  private reportOnSocketTimeToFirstAudioBufferAdd(
+    messages: BufferedMessage[] = [],
+  ) {
+    if (!messages.length) {
+      return 0;
+    }
+
     const filtered = messages.filter(
-      (message) => message.first_audio_buffer_add_time,
+      (message) => message.first_audio_buffer_add_time !== undefined,
     );
+
+    if (filtered.length === 0) {
+      return 0;
+    }
+
     const totalTime = filtered.reduce(
       (acc, { first_audio_buffer_add_time, vad_speech_stopped_time }) =>
-        acc + (first_audio_buffer_add_time - vad_speech_stopped_time),
+        acc + (first_audio_buffer_add_time! - vad_speech_stopped_time),
       0,
     );
 
