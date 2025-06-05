@@ -4,27 +4,34 @@
 The user reported increasing delay during one-sided conversations where one person talks for more than half the time. The issue was suspected to be related to delay accumulation between multiple translation cycles, not individual translation delays (which are expected to be long for long speech segments).
 
 ## Root Causes Identified
-1. **Race Condition in Timing State Management**: Critical timing issue where `speech_stopped` events reset speech timestamps before `response.created` events set translation start times, causing timing tracking to fail
-2. **Audio Buffer Accumulation**: Input audio buffers might accumulate audio between translation cycles, causing delays to compound
-3. **Inadequate Buffer Management**: The timing of when input buffers are cleared might not be optimal for preventing accumulation
-4. **Lack of Delay Monitoring**: No mechanism to detect when translation delays become excessive and take corrective action
-5. **Timing State Drift**: Speech timing state wasn't being properly reset between translation cycles
+1. **Mixed Timestamp Systems**: Critical issue where speech timing used Twilio media timestamps while translation timing used system timestamps, causing massive timing errors when mixed in arithmetic operations
+2. **Race Condition in Timing State Management**: Critical timing issue where `speech_stopped` events reset speech timestamps before `response.created` events set translation start times, causing timing tracking to fail
+3. **Audio Buffer Accumulation**: Input audio buffers might accumulate audio between translation cycles, causing delays to compound
+4. **Inadequate Buffer Management**: The timing of when input buffers are cleared might not be optimal for preventing accumulation
+5. **Lack of Delay Monitoring**: No mechanism to detect when translation delays become excessive and take corrective action
+6. **Timing State Drift**: Speech timing state wasn't being properly reset between translation cycles
 
 ## Implemented Solutions
 
-### 1. Fixed Race Condition in Timing State Management
+### 1. Fixed Mixed Timestamp Systems
+**Critical Fix**: Unified all timing calculations to use consistent system timestamps:
+- Speech start timestamps now use `new Date().getTime()` instead of Twilio media timestamps
+- This prevents massive timing errors from mixing different timestamp epochs
+- All timing arithmetic now uses the same timestamp base for accuracy
+
+### 2. Fixed Race Condition in Timing State Management
 **Critical Fix**: Preserved speech start timestamps until translation completes instead of resetting them when speech stops:
 - `input_audio_buffer.speech_stopped` no longer resets speech start timestamps
 - Speech timestamps are only reset when translation completes (`response.done`/`response.audio.done`)
 - This ensures timing tracking has valid data throughout the translation process
 
-### 2. Enhanced Timing State Tracking
+### 3. Enhanced Timing State Tracking
 Added new private fields to track timing information:
 - `#callerSpeechStartTimestamp` / `#agentSpeechStartTimestamp`: Track when each speech segment begins
 - `#callerLastSpeechTimestamp` / `#agentLastSpeechTimestamp`: Track the most recent audio timestamp
 - `#callerTranslationStartTime` / `#agentTranslationStartTime`: Track when translation processing begins
 
-### 3. Enhanced Translation Timing Monitoring
+### 4. Enhanced Translation Timing Monitoring
 Implemented `trackTranslationTiming()` method that:
 - Monitors translation processing delays and total delays from speech start
 - Warns when delays become excessive (>5 seconds)
@@ -32,7 +39,7 @@ Implemented `trackTranslationTiming()` method that:
 - Provides detailed logging for debugging timing issues
 - Warns when timing data is missing (indicating race conditions)
 
-### 4. Improved Buffer Management
+### 5. Improved Buffer Management
 Enhanced input audio buffer clearing strategy:
 - Clear buffers immediately after speech stops (VAD detection)
 - Additional buffer clearing when excessive delays are detected

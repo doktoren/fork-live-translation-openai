@@ -149,13 +149,14 @@ export default class AudioInterceptor {
 
   private translateAndForwardAgentAudio(message: MediaBaseAudioMessage) {
     const currentTimestamp = parseInt(message.media.timestamp);
+    const currentSystemTime = new Date().getTime();
     
-    // Track speech timing for compensation
+    // Track speech timing for compensation using system time for consistency
     if (!this.#agentSpeechStartTimestamp) {
-      this.#agentSpeechStartTimestamp = currentTimestamp;
-      this.logger.debug(`Agent speech started at timestamp: ${currentTimestamp}`);
+      this.#agentSpeechStartTimestamp = currentSystemTime;
+      this.logger.debug(`Agent speech started at system time: ${currentSystemTime} (media timestamp: ${currentTimestamp})`);
     }
-    this.#agentLastSpeechTimestamp = currentTimestamp;
+    this.#agentLastSpeechTimestamp = currentSystemTime;
     
     // Audio Mixing/Replacement: Only forward untranslated audio if no translation is active
     if (
@@ -188,13 +189,14 @@ export default class AudioInterceptor {
 
   private translateAndForwardCallerAudio(message: MediaBaseAudioMessage) {
     const currentTimestamp = parseInt(message.media.timestamp);
+    const currentSystemTime = new Date().getTime();
     
-    // Track speech timing for compensation
+    // Track speech timing for compensation using system time for consistency
     if (!this.#callerSpeechStartTimestamp) {
-      this.#callerSpeechStartTimestamp = currentTimestamp;
-      this.logger.debug(`Caller speech started at timestamp: ${currentTimestamp}`);
+      this.#callerSpeechStartTimestamp = currentSystemTime;
+      this.logger.debug(`Caller speech started at system time: ${currentSystemTime} (media timestamp: ${currentTimestamp})`);
     }
-    this.#callerLastSpeechTimestamp = currentTimestamp;
+    this.#callerLastSpeechTimestamp = currentSystemTime;
     
     // Audio Mixing/Replacement: Only forward untranslated audio if no translation is active
     if (

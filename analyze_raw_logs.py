@@ -293,8 +293,13 @@ class LogAnalyzer:
                 print(f"  Actual timestamp:   {actual_ts}")
                 print(f"  Discrepancy:        {discrepancy}ms")
                 
+                # Check for timezone-related discrepancies (multiples of 1 hour)
+                hours_diff = abs(discrepancy) / (1000 * 60 * 60)
                 if abs(discrepancy) > 100:  # More than 100ms difference
-                    print(f"  ⚠️  WARNING: Large timing discrepancy detected!")
+                    if abs(hours_diff - round(hours_diff)) < 0.01:  # Close to whole hours
+                        print(f"  ℹ️  Note: {hours_diff:.0f}h discrepancy likely due to timezone difference")
+                    else:
+                        print(f"  ⚠️  WARNING: Large timing discrepancy detected!")
                 print()
         
         # Detailed event timeline for debugging
