@@ -270,8 +270,9 @@ export default class AudioInterceptor {
         output_audio_format: 'g711_ulaw',
         // input_audio_transcription: {model: 'whisper-1'},
         turn_detection: { 
-          type: 'server_vad', 
+          type: 'server_vad',
           threshold: 0.6,
+          silence_duration_ms: 1000,
           create_response: true,
           interrupt_response: false  // Prevent interrupting ongoing translations
         },
@@ -296,6 +297,7 @@ export default class AudioInterceptor {
         turn_detection: { 
           type: 'server_vad', 
           threshold: 0.6,
+          silence_duration_ms: 1000,
           create_response: true,
           interrupt_response: false  // Prevent interrupting ongoing translations
         },
