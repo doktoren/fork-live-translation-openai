@@ -269,6 +269,11 @@ export default class AudioInterceptor {
         input_audio_format: 'g711_ulaw',
         output_audio_format: 'g711_ulaw',
         // input_audio_transcription: {model: 'whisper-1'},
+        input_audio_transcription: null,
+        // Even with input_audio_transcription commented out I'm these messages in the log:
+        // [09:02:38.298] INFO: Agent message from OpenAI: {"type":"response.audio_transcript.delta",
+        // "event_id":"event_BeyuUrTCzhrKWQqHjqEVh","response_id":"resp_BeyuRV6EOJaEJ3NAH1Ogb",
+        // "item_id":"item_BeyuR5QsLF1dbBLPScCVZ","output_index":0,"content_index":0,"delta":" ignor"}
         turn_detection: { 
           type: 'server_vad',
           threshold: 0.6,
@@ -294,6 +299,7 @@ export default class AudioInterceptor {
         input_audio_format: 'g711_ulaw',
         output_audio_format: 'g711_ulaw',
         // input_audio_transcription: {model: 'whisper-1'},
+        input_audio_transcription: null,
         turn_detection: { 
           type: 'server_vad', 
           threshold: 0.6,
