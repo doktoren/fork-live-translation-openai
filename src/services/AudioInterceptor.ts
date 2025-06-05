@@ -351,6 +351,9 @@ export default class AudioInterceptor {
           this.logger.info(
             `Caller translation started at ${currentTime} - blocking untranslated audio forwarding`,
           );
+          this.logger.info(
+            `TRANSLATION_LIFECYCLE: caller response.created response_id=${message.response?.id} timestamp=${currentTime}`,
+          );
         }
 
         if (
@@ -358,6 +361,7 @@ export default class AudioInterceptor {
           message.type === 'response.audio.done'
         ) {
           this.#callerTranslationActive = false;
+          const completedResponseId = this.#callerActiveResponseId;
           this.#callerActiveResponseId = undefined;
           this.#callerTranslationStartTime = undefined;
           
@@ -372,6 +376,24 @@ export default class AudioInterceptor {
           
           this.logger.info(
             'Caller translation completed - resuming untranslated audio forwarding',
+          );
+          this.logger.info(
+            `TRANSLATION_LIFECYCLE: caller ${message.type} response_id=${completedResponseId} timestamp=${currentTime}`,
+          );
+        }
+
+        if (message.type === 'input_audio_buffer.speech_started') {
+          // Check for interruption: speech starting while translation is active
+          if (this.#agentTranslationActive && this.#agentActiveResponseId) {
+            this.logger.warn(
+              `INTERRUPTION_DETECTED: caller speech_started while agent translation active! ` +
+              `Active response_id=${this.#agentActiveResponseId}, ` +
+              `translation_duration=${currentTime - (this.#agentTranslationStartTime || currentTime)}ms, ` +
+              `timestamp=${currentTime}`
+            );
+          }
+          this.logger.info(
+            `SPEECH_LIFECYCLE: caller speech_started timestamp=${currentTime}`,
           );
         }
 
@@ -393,6 +415,9 @@ export default class AudioInterceptor {
             type: 'input_audio_buffer.clear'
           });
           this.logger.info('Cleared caller input audio buffer after speech stopped');
+          this.logger.info(
+            `SPEECH_LIFECYCLE: caller speech_stopped timestamp=${currentTime}`,
+          );
         }
 
         if (message.type === 'response.audio.delta') {
@@ -434,6 +459,9 @@ export default class AudioInterceptor {
           this.logger.info(
             `Agent translation started at ${currentTime} - blocking untranslated audio forwarding`,
           );
+          this.logger.info(
+            `TRANSLATION_LIFECYCLE: agent response.created response_id=${message.response?.id} timestamp=${currentTime}`,
+          );
         }
 
         if (
@@ -441,6 +469,7 @@ export default class AudioInterceptor {
           message.type === 'response.audio.done'
         ) {
           this.#agentTranslationActive = false;
+          const completedResponseId = this.#agentActiveResponseId;
           this.#agentActiveResponseId = undefined;
           this.#agentTranslationStartTime = undefined;
           
@@ -455,6 +484,24 @@ export default class AudioInterceptor {
           
           this.logger.info(
             'Agent translation completed - resuming untranslated audio forwarding',
+          );
+          this.logger.info(
+            `TRANSLATION_LIFECYCLE: agent ${message.type} response_id=${completedResponseId} timestamp=${currentTime}`,
+          );
+        }
+
+        if (message.type === 'input_audio_buffer.speech_started') {
+          // Check for interruption: speech starting while translation is active
+          if (this.#callerTranslationActive && this.#callerActiveResponseId) {
+            this.logger.warn(
+              `INTERRUPTION_DETECTED: agent speech_started while caller translation active! ` +
+              `Active response_id=${this.#callerActiveResponseId}, ` +
+              `translation_duration=${currentTime - (this.#callerTranslationStartTime || currentTime)}ms, ` +
+              `timestamp=${currentTime}`
+            );
+          }
+          this.logger.info(
+            `SPEECH_LIFECYCLE: agent speech_started timestamp=${currentTime}`,
           );
         }
 
@@ -476,6 +523,9 @@ export default class AudioInterceptor {
             type: 'input_audio_buffer.clear'
           });
           this.logger.info('Cleared agent input audio buffer after speech stopped');
+          this.logger.info(
+            `SPEECH_LIFECYCLE: agent speech_stopped timestamp=${currentTime}`,
+          );
         }
 
         if (message.type === 'response.audio.delta') {
