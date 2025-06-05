@@ -1,0 +1,44 @@
+[10:14:13.021] INFO: Caller message from OpenAI: {"type":"response.created","event_id":"event_Bf01kiRxvRhkcrp5oDz3F","response":{"object":"realtime.response","id":"resp_Bf01kCxSGMt5jbqPD0TIr","status":"in_progress","status_details":null,"output":[],"conversation_id":"conv_Bf01anSdQOtVNogvzyeHy","modalities":["audio","text"],"voice":"alloy","output_audio_format":"g711_ulaw","temperature":0.6,"max_output_tokens":"inf","usage":null,"metadata":null}}
+    stream: "app"
+    reqId: "req-2"
+    requestId: "req-2"
+[10:14:13.021] INFO: Caller translation started at 1749111253021 - blocking untranslated audio forwarding
+    stream: "app"
+    reqId: "req-2"
+    requestId: "req-2"
+[10:14:13.159] INFO: Caller message from OpenAI: {"type":"input_audio_buffer.cleared","event_id":"event_Bf01lVFUEFtmkzU1JzEQl"}
+    stream: "app"
+    reqId: "req-2"
+    requestId: "req-2"
+[10:14:13.496] INFO: Caller message from OpenAI: {"type":"response.output_item.added","event_id":"event_Bf01lBgQpR2Q3hBfK0pad","response_id":"resp_Bf01kCxSGMt5jbqPD0TIr","output_index":0,"item":{"id":"item_Bf01kAs1c4a0k5Uvchf8w","object":"realtime.item","type":"message","status":"in_progress","role":"assistant","content":[]}}
+    stream: "app"
+    reqId: "req-2"
+    requestId: "req-2"
+[10:14:13.498] INFO: Caller message from OpenAI: {"type":"conversation.item.created","event_id":"event_Bf01lRZpDlE60FVcKANPq","previous_item_id":"item_Bf01jq8BVHgRRBQc488BN","item":{"id":"item_Bf01kAs1c4a0k5Uvchf8w","object":"realtime.item","type":"message","status":"in_progress","role":"assistant","content":[]}}
+    stream: "app"
+    reqId: "req-2"
+    requestId: "req-2"
+[10:14:13.498] INFO: Caller message from OpenAI: {"type":"response.content_part.added","event_id":"event_Bf01lROZobmBgNaU1LqxN","response_id":"resp_Bf01kCxSGMt5jbqPD0TIr","item_id":"item_Bf01kAs1c4a0k5Uvchf8w","output_index":0,"content_index":0,"part":{"type":"audio","transcript":""}}
+    stream: "app"
+    reqId: "req-2"
+    requestId: "req-2"
+[10:14:13.499] INFO: Caller message from OpenAI: {"type":"response.audio_transcript.delta","event_id":"event_Bf01lH2qVQThbNmN2TkeJ","response_id":"resp_Bf01kCxSGMt5jbqPD0TIr","item_id":"item_Bf01kAs1c4a0k5Uvchf8w","output_index":0,"content_index":0,"delta":"Hello"}
+    stream: "app"
+    reqId: "req-2"
+    requestId: "req-2"
+[10:14:13.501] INFO: Caller message from OpenAI: {"type":"response.audio_transcript.delta","event_id":"event_Bf01lD7yvEBSpfYr7g7nM","response_id":"resp_Bf01kCxSGMt5jbqPD0TIr","item_id":"item_Bf01kAs1c4a0k5Uvchf8w","output_index":0,"content_index":0,"delta":"!"}
+    stream: "app"
+    reqId: "req-2"
+    requestId: "req-2"
+[10:14:13.514] INFO: Caller message from OpenAI: {"type":"response.audio_transcript.delta","event_id":"event_Bf01lTlJudW9IADCdmxdy","response_id":"resp_Bf01kCxSGMt5jbqPD0TIr","item_id":"item_Bf01kAs1c4a0k5Uvchf8w","output_index":0,"content_index":0,"delta":" How"}
+    stream: "app"
+    reqId: "req-2"
+    requestId: "req-2"
+[10:14:13.586] INFO: Caller message from OpenAI: {"type":"response.audio.delta","event_id":"event_Bf01lg0p4CvSjExMUHhPq","response_id":"resp_Bf01kCxSGMt5jbqPD0TIr","item_id":"item_Bf01kAs1c4a0k5Uvchf8w","output_index":0,"content_index":0,"delta":"/f39/P39/v7+/v7+/v7/fn5+fX19fX19fXx8e3t7e3t6enl5ent7e3t6e3p6ent8fHt7fX5+fHx9fn59fHz/fv79/v9+fX3++vv9+fb5/f748/f+fvjy9PDs7n5zefv09fvu6vxzdnh6ffLr+Xp+fvb0ePt3av/w7fNy9etuZnV1fmRf79nrdGVrZV1q6eP3bWv+811TX/n7dO97X1Jf4+1ta2ri/V/w3/NaW/Lj3/d14vhvcvff72J3c/h+7Otl4thnXV7Y0Wxy29zsWVzc2/5a7uDeaV3442Zvb8zRW1ZbWu5f08nfYldP62j0z83mVFfa2P9VbtPhXmLp/e1vcmNXdnv1d/ja3X5SVWlqYuvu99bsWW/nbGxKVuTX21xY2WlibefMbkj27N7lX+vL2W5LTNl939Tn2G5EaM7H7URT0MvaTlPcztpNSlvt1N1R/9LRb0JU0MjQTU/V5UxI3L/Bck5kYFBYbb/HXEtJ7dlS5enpX0t9y9HlRUnTy/h1SlzrUOjO7dlcWuD0bW9yzdRcWO3b21hWYPLN2lrd4vhuVHLae+3+29hSUWXRw+9OUFvUeE9UcMrJWElN6s3/Sl7lytRia9/Qz1FOTWjY3N7QzstdSEpr1M3paO9RVFjsy91WVU18XlVu4s7XVlNOW+ft8Opu7WFudGV05evc3s7VzdvdzdXZ2u/T3M/GyNF5Xn3s+E1IQE1XWFY+NzYxPD4/Qz9GXnPU7Ozbx7mzt7e7t7KwsbWzrqypr7fH2uloUEtDTUM/MCsmIyMhHx0cHypCy728w8nHzddue827sK2tra2trrCvraeioaKrtsTLxcTM+ldPS0M3LCckJCQhHhwdJDP6wb3CysS/wMtlT1DowbeztLWzsa6ur6+urq6zu8fP08zP3FhGPTkzLSkkIB8fHx4fIitCzbWwtre/vL/G0nFoftW+ubGxsa+uq6uqq66xuLy/xMbO2nZRS0Q+OC8qJSEfHh0dHiQuVr6wrq+wsrS4wtJiVFVzzb+2sa+trKqpqqyxt77BwsfI0+ZuV1FIPTIrJiIfHx0cHB4kL3o="}
+    stream: "app"
+    reqId: "req-2"
+    requestId: "req-2"
+[10:14:13.586] INFO: Received caller translation from OpenAI
+    stream: "app"
+    reqId: "req-2"
+    requestId: "req-2"
