@@ -222,7 +222,7 @@ export default class AudioInterceptor {
   private setupOpenAISockets() {
     this.logger.warn('setupOpenAISockets called');
     const url =
-      'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17';
+      'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-06-03';
     const callerSocket = new WebSocket(url, {
       headers: {
         Authorization: `Bearer ${this.config.OPENAI_API_KEY}`,
