@@ -70,6 +70,10 @@ export default class AudioInterceptor {
     { payload: string; timestamp: number; sequenceNumber: number }[]
   >();
 
+  // Queues for paced audio playback
+  #playbackQueues = new Map<StreamSocket, string[]>();
+  #playbackTimers = new Map<StreamSocket, NodeJS.Timeout>();
+
   // Timing compensation for maintaining proper audio timing
   #callerLastSpeechTimestamp?: number;
   #agentLastSpeechTimestamp?: number;
@@ -105,6 +109,11 @@ export default class AudioInterceptor {
       clearInterval(this.#agentPingInterval!);
       this.#agentOpenAISocket.close();
     }
+
+    // Clear any queued audio and timers
+    this.#playbackTimers.forEach((timer) => clearTimeout(timer));
+    this.#playbackTimers.clear();
+    this.#playbackQueues.clear();
 
     // Reset audio mixing state
     this.#callerTranslationActive = false;
@@ -166,6 +175,7 @@ export default class AudioInterceptor {
       this.sendAlignedAudio(
         this.#callerSocket,
         message.media.payload,
+        true,
       );
     }
 
@@ -206,6 +216,7 @@ export default class AudioInterceptor {
       this.sendAlignedAudio(
         this.#agentSocket,
         message.media.payload,
+        true,
       );
     }
 
@@ -675,6 +686,7 @@ export default class AudioInterceptor {
   private sendAlignedAudio(
     socket: StreamSocket | null,
     audioPayload: string,
+    realTime = false,
   ) {
     if (
       !socket ||
@@ -691,15 +703,28 @@ export default class AudioInterceptor {
       // Align audio to G.711 frame boundaries to prevent clicks/pops
       const alignedAudio = this.alignAudioFrames(audioPayload);
 
-      // Use the existing StreamSocket send method which handles proper formatting
-      socket.send([alignedAudio]);
+      // When realTime is true we forward immediately (for untranslated audio)
+      if (realTime) {
+        socket.send([alignedAudio]);
+        this.logger.debug(
+          `Sent realtime audio chunk: ${alignedAudio.length} bytes`,
+        );
+        return;
+      }
 
-      this.logger.debug(
-        `Sent aligned audio chunk: ${alignedAudio.length} bytes`,
-      );
+      // Otherwise queue audio for paced playback to prevent backlog
+      let queue = this.#playbackQueues.get(socket);
+      if (!queue) {
+        queue = [];
+        this.#playbackQueues.set(socket, queue);
+      }
+      queue.push(alignedAudio);
+
+      if (!this.#playbackTimers.has(socket)) {
+        this.scheduleNextPlayback(socket);
+      }
     } catch (error) {
       this.logger.error('Error sending aligned audio:', error);
-      // Fallback to original method if alignment fails and socket is still available
       if (
         socket &&
         socket.socket &&
@@ -712,6 +737,21 @@ export default class AudioInterceptor {
         }
       }
     }
+  }
+
+  private scheduleNextPlayback(socket: StreamSocket) {
+    const queue = this.#playbackQueues.get(socket);
+    if (!queue || queue.length === 0) {
+      this.#playbackTimers.delete(socket);
+      return;
+    }
+
+    const chunk = queue.shift()!;
+    socket.send([chunk]);
+
+    const durationMs = Buffer.from(chunk, 'base64').length / 8;
+    const timer = setTimeout(() => this.scheduleNextPlayback(socket), durationMs);
+    this.#playbackTimers.set(socket, timer);
   }
 
   /**
