@@ -3,18 +3,23 @@ Forked repository is at https://github.com/doktoren/fork-live-translation-openai
 
 # Local tweaks:
 
-Mandarin has been replaced with Danish and Hindi has been replaced with Czech.
+The caller language has been hard coded to Danish.
+Instead of calling Flex Studio, `CALL_THIS_NUMBER_INSTEAD` from an env var will be called.
 
-`CALL_THIS_NUMBER_INSTEAD` has been added to `.env`/`.env.sample`.
-I haven't tested if the setup still works if this is set to the empty string.
+`TWILIO_FLEX_NUMBER` and others are no longer used but I haven't done any cleanup.
 
-The select language part for the caller can be omitted by configuring TWILIO_CALLER_NUMBER with a webhook and url e.g.
+Using AI ([OpenHands](https://docs.all-hands.dev/) and [OpenAI Codex](https://chatgpt.com/codex))
+I've optimized the flow such that the forward of untranslated audio is interrupted once the next
+translated segment is ready.
 
-```
-https://8eda-87-116-16-2.ngrok-free.app/incoming-call?lang=danish
-```
+AI is okay at adding logic for fixing problems. But it just adds and adds and adds.
+[`AudioInterceptor.ts`](src/services/AudioInterceptor.ts) started at 350 lines - now it is 850 lines...
 
-instead of the Studio flow.
+I expect there are corner cases where different parts of the added logic conflicts and causes problems.
+However, the goal of these changes is just to make a PoC. And the possibly later reimplement from scratch.
+
+Note that `FORWARD_AUDIO_BEFORE_TRANSLATION` must be `true` - the implementation may no longer work if set to `false`.
+
 
 #  Live Voice Translation with Twilio & OpenAI Realtime
 This application demonstrates how to use Twilio and OpenAI's Realtime API for bidirectional
