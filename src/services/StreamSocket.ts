@@ -170,6 +170,21 @@ export default class StreamSocket {
   };
 
   /**
+   * Sends a clear message to Twilio to flush any queued audio
+   */
+  public clear = () => {
+    if (this.socket.readyState === WebSocket.OPEN) {
+      const clearMessage = {
+        event: 'clear',
+        streamSid: this.streamSid,
+      };
+      this.socket.send(JSON.stringify(clearMessage));
+    } else {
+      this.logger.error('WebSocket is not open. Unable to send clear message.');
+    }
+  };
+
+  /**
    * Routes the message to the correct callback
    * @param message
    */
