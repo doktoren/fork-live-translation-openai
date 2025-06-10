@@ -78,6 +78,21 @@ export default class AudioInterceptor {
   #callerSpeechStartTimestamp?: number;
   #agentSpeechStartTimestamp?: number;
 
+  // Tracking timing of translated audio playback on Twilio
+  #callerOutputState = {
+    currentStart: undefined as number | undefined,
+    currentDurationMs: 0,
+    lastStart: undefined as number | undefined,
+    lastDurationMs: undefined as number | undefined,
+  };
+
+  #agentOutputState = {
+    currentStart: undefined as number | undefined,
+    currentDurationMs: 0,
+    lastStart: undefined as number | undefined,
+    lastDurationMs: undefined as number | undefined,
+  };
+
   public constructor(options: AudioInterceptorOptions) {
     this.logger = options.logger;
     this.config = options.config;
@@ -112,6 +127,19 @@ export default class AudioInterceptor {
     this.#callerActiveResponseId = undefined;
     this.#agentActiveResponseId = undefined;
     this.#audioBuffer.clear();
+
+    this.#callerOutputState = {
+      currentStart: undefined,
+      currentDurationMs: 0,
+      lastStart: undefined,
+      lastDurationMs: undefined,
+    };
+    this.#agentOutputState = {
+      currentStart: undefined,
+      currentDurationMs: 0,
+      lastStart: undefined,
+      lastDurationMs: undefined,
+    };
     
     // Reset timing compensation state
     this.#callerLastSpeechTimestamp = undefined;
@@ -364,6 +392,8 @@ export default class AudioInterceptor {
           const completedResponseId = this.#callerActiveResponseId;
           this.#callerActiveResponseId = undefined;
           this.#callerTranslationStartTime = undefined;
+
+          this.finalizeTranslationOutput(this.#agentOutputState);
           
           // Reset timing state after translation to prevent long-term drift
           this.logger.debug(
@@ -435,7 +465,11 @@ export default class AudioInterceptor {
           }
           // Track translation timing to detect delay accumulation
           this.trackTranslationTiming('caller', currentTime);
-          this.sendAlignedAudio(this.#agentSocket, message.delta!);
+          this.sendTranslationOutput(
+            this.#agentSocket,
+            message.delta!,
+            this.#agentOutputState,
+          );
         }
       } catch (error) {
         this.logger.error('Error processing caller OpenAI message', {
@@ -472,6 +506,8 @@ export default class AudioInterceptor {
           const completedResponseId = this.#agentActiveResponseId;
           this.#agentActiveResponseId = undefined;
           this.#agentTranslationStartTime = undefined;
+
+          this.finalizeTranslationOutput(this.#callerOutputState);
           
           // Reset timing state after translation to prevent long-term drift
           this.logger.debug(
@@ -543,9 +579,10 @@ export default class AudioInterceptor {
           }
           // Track translation timing to detect delay accumulation
           this.trackTranslationTiming('agent', currentTime);
-          this.sendAlignedAudio(
+          this.sendTranslationOutput(
             this.#callerSocket,
             message.delta!,
+            this.#callerOutputState,
           );
         }
       } catch (error) {
@@ -712,6 +749,54 @@ export default class AudioInterceptor {
         }
       }
     }
+  }
+
+  /**
+   * Handles sending translated audio to Twilio while optionally clearing
+   * the audio buffer when starting a new segment.
+   */
+  private sendTranslationOutput(
+    socket: StreamSocket | null,
+    audioPayload: string,
+    state: {
+      currentStart?: number;
+      currentDurationMs: number;
+      lastStart?: number;
+      lastDurationMs?: number;
+    },
+  ) {
+    const now = Date.now();
+    if (state.currentStart === undefined) {
+      if (
+        state.lastStart !== undefined &&
+        state.lastDurationMs !== undefined &&
+        state.lastStart + state.lastDurationMs <= now
+      ) {
+        socket?.clear();
+      }
+      state.currentStart = now;
+      state.currentDurationMs = 0;
+    }
+
+    const durationMs =
+      (Buffer.from(audioPayload, 'base64').length / 8000) * 1000;
+    state.currentDurationMs += durationMs;
+
+    this.sendAlignedAudio(socket, audioPayload);
+  }
+
+  private finalizeTranslationOutput(state: {
+    currentStart?: number;
+    currentDurationMs: number;
+    lastStart?: number;
+    lastDurationMs?: number;
+  }) {
+    if (state.currentStart !== undefined) {
+      state.lastStart = state.currentStart;
+      state.lastDurationMs = state.currentDurationMs;
+    }
+    state.currentStart = undefined;
+    state.currentDurationMs = 0;
   }
 
   /**
